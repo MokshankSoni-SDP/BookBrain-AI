@@ -7,6 +7,8 @@ CHAPTER_NUMBER = 6
 HEADER_CUTOFF = 120
 FOOTER_CUTOFF = 750
 
+IMAGE_DIR = "./extracted_images"
+
 
 
 
