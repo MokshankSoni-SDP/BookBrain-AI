@@ -1,10 +1,10 @@
 # File Paths
 PDF_PATH = "Physics-11 1-92-126.pdf"
-OUTPUT_JSON = "output/ch6.json"
+OUTPUT_JSON = "chapter_structure.json"
 
 CHAPTER_NUMBER = 6
 
-HEADER_CUTOFF = 120
+HEADER_CUTOFF = 50
 FOOTER_CUTOFF = 750
 
 IMAGE_DIR = "./extracted_images"
