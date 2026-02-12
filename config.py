@@ -8,7 +8,8 @@ IMAGE_DIR = "./extract_images"
 RULES = {
     # Added \s+ to ensure we match "6.1 INTRODUCTION" correctly
     "HEADING_PATTERN": r'^\d+\.\d+(\.\d+)?\s+', 
-    "FIGURE_PATTERN": r'^(?:Fig\.|Figure)\s*\d+\.\d+', # Stricter start-of-line match
+    "FIGURE_PATTERN": r'(?:Fig\.|Figure)\s*(\d+\.\d+)',
+    #"FIGURE_PATTERN": r'^(?:Fig\.|Figure)\s*\d+\.\d+', # Stricter start-of-line match
     "EQUATION_PATTERN": r'[\(\[](\d+\.\d+)[\)\]]',
     "EXERCISE_KEYWORDS": ["EXERCISES", "Problem", "Question"]
 }
