@@ -3,123 +3,98 @@ import re
 import config
 import os
 
-# Ensure the image directory exists
-if not os.path.exists(config.IMAGE_DIR):
-    os.makedirs(config.IMAGE_DIR)
-
-def get_smart_diagram_areas(page):
-    """Detects areas containing vector drawings and labels."""
-    paths = page.get_drawings()
-    diagram_bboxes = []
+def get_diagram_bbox(page, caption_block):
+    """
+    Given a caption block, looks upward to find the 
+    associated diagram area by checking for drawings/images.
+    """
+    caption_rect = fitz.Rect(caption_block[:4])
+    # Define a search area above the caption (roughly 250 points up)
+    search_area = fitz.Rect(caption_rect.x0, caption_rect.y0 - 250, 
+                            caption_rect.x1 + 50, caption_rect.y0)
     
-    for p in paths:
-        rect = p["rect"]
-        if rect.width < 5 or rect.height < 5: continue # Ignore tiny artifacts
+    # Get all drawings in that search area
+    drawings = [d["rect"] for d in page.get_drawings() if d["rect"].intersects(search_area)]
+    
+    if not drawings:
+        return None
         
-        found = False
-        for i, bbox in enumerate(diagram_bboxes):
-            # If a drawing is within 50 points of another, merge them into one diagram
-            if rect.intersects(bbox + (-50, -50, 50, 50)):
-                diagram_bboxes[i] = bbox | rect
-                found = True
-                break
-        if not found:
-            diagram_bboxes.append(rect)
-    return diagram_bboxes
+    # Merge all drawings into one large diagram box
+    diagram_box = drawings[0]
+    for d_rect in drawings[1:]:
+        diagram_box |= d_rect
+        
+    # Add a small padding to catch labels like theta or P1
+    return diagram_box + (-10, -10, 10, 10)
 
 def classify_and_clean():
     doc = fitz.open(config.PDF_PATH)
     all_items = []
-    fig_counter = 0
+    img_counter = 0
     
     for page_num, page in enumerate(doc):
         page_width = page.rect.width
         split_x = page_width * config.COLUMN_GAP_THRESHOLD
         
-        # 1. Identify Diagram Areas first to avoid double-processing
-        diagram_areas = get_smart_diagram_areas(page)
+        # Get blocks to find captions first
+        blocks = page.get_text("blocks")
+        diagrams_on_page = []
         
-        # 2. Get all page blocks
-        page_dict = page.get_text("dict")
-        blocks = page_dict["blocks"]
-        
-        # Partition blocks into Left and Right columns
-        left_col, right_col = [], []
+        # 1. FIND CAPTION ANCHORS
         for b in blocks:
-            # Skip any block that is inside a detected diagram area
-            # We will handle diagrams as a single unit later
-            if any(fitz.Rect(b["bbox"]).intersects(area) for area in diagram_areas):
-                continue
-            
-            if b["bbox"][0] < split_x:
-                left_col.append(b)
-            else:
-                right_col.append(b)
+            if re.match(config.RULES["FIGURE_PATTERN"], b[4].strip(), re.I):
+                area = get_diagram_bbox(page, b)
+                if area:
+                    img_counter += 1
+                    img_path = os.path.join(config.IMAGE_DIR, f"page_{page_num+1}_fig_{img_counter}.png")
+                    
+                    # Save snapshot
+                    pix = page.get_pixmap(clip=area, matrix=fitz.Matrix(3, 3))
+                    pix.save(img_path)
+                    
+                    diagrams_on_page.append({
+                        "bbox": area,
+                        "path": img_path,
+                        "caption": b[4].strip()
+                    })
 
-        # Sort columns vertically
-        left_col.sort(key=lambda x: x["bbox"][1])
-        right_col.sort(key=lambda x: x["bbox"][1])
+        # 2. PROCESS TEXT FLOW
+        page_dict = page.get_text("dict")
+        raw_blocks = page_dict["blocks"]
         
-        # Add diagrams to their respective columns based on their position
-        for area in diagram_areas:
-            fig_counter += 1
-            img_filename = f"page_{page_num+1}_fig_{fig_counter}.png"
-            img_path = os.path.join(config.IMAGE_DIR, img_filename)
-            
-            # Save the diagram with a margin to catch labels (P1, theta, etc.)
-            snapshot_area = area + (-15, -15, 15, 15)
-            pix = page.get_pixmap(clip=snapshot_area, matrix=fitz.Matrix(3, 3))
-            pix.save(img_path)
-            
-            diagram_marker = {
-                "type": "DIAGRAM",
-                "bbox": area,
-                "path": img_path,
-                "value": f"[IMAGE: {img_path}]"
-            }
-            
-            # Insert diagram into the correct column flow
-            if area.x0 < split_x:
-                left_col.append(diagram_marker)
-            else:
-                right_col.append(diagram_marker)
+        left_col, right_col = [], []
+        processed_captions = [d["caption"] for d in diagrams_on_page]
 
-        # Final sort for each column to ensure diagrams are in the right sequence with text
-        left_col.sort(key=lambda x: x["bbox"][1] if isinstance(x, dict) and "bbox" in x else x[1])
-        right_col.sort(key=lambda x: x["bbox"][1] if isinstance(x, dict) and "bbox" in x else x[1])
-        
-        ordered_blocks = left_col + right_col
-
-        # 3. Process ordered items into the final list
-        i = 0
-        while i < len(ordered_blocks):
-            item = ordered_blocks[i]
-            
-            # Handle Text Blocks
-            if "lines" in item:
-                text = " ".join([s["text"] for l in item["lines"] for s in l["spans"]]).strip()
-                if not text or "Reprint" in text:
-                    i += 1
+        for b in raw_blocks:
+            if "lines" in b:
+                text = " ".join([s["text"] for l in b["lines"] for s in l["spans"]]).strip()
+                
+                # Skip if this text is a caption we already handled for a diagram
+                if text in processed_captions or not text or "Reprint" in text:
                     continue
                 
-                if re.match(config.RULES["HEADING_PATTERN"], text):
-                    all_items.append({"type": "HEADING", "value": text})
-                else:
-                    all_items.append({"type": "CONTENT", "value": text})
-            
-            # Handle Diagram Markers
-            elif item.get("type") == "DIAGRAM":
+                # Partition
+                if b["bbox"][0] < split_x: left_col.append(b)
+                else: right_col.append(b)
+
+        # 3. MERGE DIAGRAMS INTO FLOW
+        for d in diagrams_on_page:
+            marker = {"type": "DIAGRAM", "bbox": d["bbox"], "value": f"[IMAGE: {d['path']}]", "caption": d["caption"]}
+            if d["bbox"][0] < split_x: left_col.append(marker)
+            else: right_col.append(marker)
+
+        # Sort and Extract
+        left_col.sort(key=lambda x: x["bbox"][1] if "bbox" in x else x[1])
+        right_col.sort(key=lambda x: x["bbox"][1] if "bbox" in x else x[1])
+        
+        for item in (left_col + right_col):
+            if "lines" in item:
+                text = " ".join([s["text"] for l in item["lines"] for s in l["spans"]]).strip()
+                itype = "HEADING" if re.match(config.RULES["HEADING_PATTERN"], text) else "CONTENT"
+                all_items.append({"type": itype, "value": text})
+            else:
                 all_items.append({"type": "CONTENT", "value": item["value"]})
-                
-                # Look-ahead for Caption (e.g., Fig 6.1)
-                if i + 1 < len(ordered_blocks):
-                    next_item = ordered_blocks[i+1]
-                    if "lines" in next_item:
-                        next_text = " ".join([s["text"] for l in next_item["lines"] for s in l["spans"]]).strip()
-                        if re.match(config.RULES["FIGURE_PATTERN"], next_text, re.I):
-                            all_items.append({"type": "CONTENT", "value": next_text})
-                            i += 1
-            i += 1
+                all_items.append({"type": "CONTENT", "value": item["caption"]})
 
     doc.close()
     return all_items
