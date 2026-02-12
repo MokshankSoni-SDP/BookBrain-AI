@@ -3,87 +3,95 @@ import re
 import config
 import os
 
-def get_diagram_bbox(page, caption_block):
+def get_diagram_bbox(page, caption_block, split_x):
     """
-    Given a caption block, looks upward to find the 
-    associated diagram area by checking for drawings/images.
+    Finds diagrams strictly within the same column as the caption.
     """
     caption_rect = fitz.Rect(caption_block[:4])
-    # Define a search area above the caption (roughly 250 points up)
-    search_area = fitz.Rect(caption_rect.x0, caption_rect.y0 - 250, 
-                            caption_rect.x1 + 50, caption_rect.y0)
+    is_left_col = caption_rect.x0 < split_x
     
-    # Get all drawings in that search area
-    drawings = [d["rect"] for d in page.get_drawings() if d["rect"].intersects(search_area)]
+    # 1. Define Column Boundaries
+    col_min_x = 0 if is_left_col else split_x
+    col_max_x = split_x if is_left_col else page.rect.width
+    
+    # 2. Define Vertical Search Area (Above the caption)
+    # Search up to 300 points above the caption
+    search_area = fitz.Rect(col_min_x, caption_rect.y0 - 300, col_max_x, caption_rect.y0)
+    
+    # 3. Filter drawings that stay WITHIN this specific column
+    drawings = [
+        d["rect"] for d in page.get_drawings() 
+        if d["rect"].intersects(search_area) and d["rect"].x0 >= col_min_x and d["rect"].x1 <= col_max_x
+    ]
     
     if not drawings:
         return None
         
-    # Merge all drawings into one large diagram box
+    # 4. Merge only the column-specific drawings
     diagram_box = drawings[0]
     for d_rect in drawings[1:]:
         diagram_box |= d_rect
         
-    # Add a small padding to catch labels like theta or P1
-    return diagram_box + (-10, -10, 10, 10)
+    # Apply a tight crop to avoid including text from the other column
+    return diagram_box + (-5, -5, 5, 5)
 
 def classify_and_clean():
     doc = fitz.open(config.PDF_PATH)
     all_items = []
     img_counter = 0
     
+    if not os.path.exists(config.IMAGE_DIR):
+        os.makedirs(config.IMAGE_DIR)
+
     for page_num, page in enumerate(doc):
-        page_width = page.rect.width
-        split_x = page_width * config.COLUMN_GAP_THRESHOLD
-        
-        # Get blocks to find captions first
+        split_x = page.rect.width * config.COLUMN_GAP_THRESHOLD
         blocks = page.get_text("blocks")
         diagrams_on_page = []
         
-        # 1. FIND CAPTION ANCHORS
+        # 1. FIND CAPTION ANCHORS (Column-Aware)
         for b in blocks:
-            if re.match(config.RULES["FIGURE_PATTERN"], b[4].strip(), re.I):
-                area = get_diagram_bbox(page, b)
+            text = b[4].strip()
+            if re.match(config.RULES["FIGURE_PATTERN"], text, re.I):
+                area = get_diagram_bbox(page, b, split_x)
                 if area:
                     img_counter += 1
                     img_path = os.path.join(config.IMAGE_DIR, f"page_{page_num+1}_fig_{img_counter}.png")
                     
-                    # Save snapshot
+                    # High-res snapshot restricted to the column area
                     pix = page.get_pixmap(clip=area, matrix=fitz.Matrix(3, 3))
                     pix.save(img_path)
                     
                     diagrams_on_page.append({
                         "bbox": area,
                         "path": img_path,
-                        "caption": b[4].strip()
+                        "caption": text,
+                        "is_left": area.x0 < split_x
                     })
 
-        # 2. PROCESS TEXT FLOW
+        # 2. PROCESS TEXT & MERGE FLOW
         page_dict = page.get_text("dict")
         raw_blocks = page_dict["blocks"]
         
         left_col, right_col = [], []
         processed_captions = [d["caption"] for d in diagrams_on_page]
 
+        # Separate text into columns
         for b in raw_blocks:
             if "lines" in b:
                 text = " ".join([s["text"] for l in b["lines"] for s in l["spans"]]).strip()
-                
-                # Skip if this text is a caption we already handled for a diagram
                 if text in processed_captions or not text or "Reprint" in text:
                     continue
                 
-                # Partition
                 if b["bbox"][0] < split_x: left_col.append(b)
                 else: right_col.append(b)
 
-        # 3. MERGE DIAGRAMS INTO FLOW
+        # Insert Diagram Markers into respective columns
         for d in diagrams_on_page:
             marker = {"type": "DIAGRAM", "bbox": d["bbox"], "value": f"[IMAGE: {d['path']}]", "caption": d["caption"]}
-            if d["bbox"][0] < split_x: left_col.append(marker)
+            if d["is_left"]: left_col.append(marker)
             else: right_col.append(marker)
 
-        # Sort and Extract
+        # 3. FINAL EXTRACTION
         left_col.sort(key=lambda x: x["bbox"][1] if "bbox" in x else x[1])
         right_col.sort(key=lambda x: x["bbox"][1] if "bbox" in x else x[1])
         
