@@ -23,9 +23,13 @@ COLLECTION_NAME = "physics_textbook"
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print(f"Using device: {device}")
 
-def load_and_process_data(file_path: str) -> List[Dict[str, Any]]:
-    with open(file_path, 'r', encoding='utf-8') as f:
-        data = json.load(f)
+def load_and_process_data(file_input: Any) -> List[Dict[str, Any]]:
+    if isinstance(file_input, str):
+        with open(file_input, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+    else:
+        # Assume file-like object (e.g. UploadedFile)
+        data = json.load(file_input)
     
     processed_items = []
     # If the root is a list, iterate; if dict (single chapter), wrap in list
@@ -81,16 +85,24 @@ def load_and_process_data(file_path: str) -> List[Dict[str, Any]]:
                     
     return processed_items
 
-def main():
+def ingest_data(file_input: Any, progress_callback=None, status_callback=None):
+    """
+    Ingests data from a file input (path or file object) into Qdrant.
+    """
+    def log(msg):
+        print(msg)
+        if status_callback:
+            status_callback(msg)
+
     # Initialize Embedding Model
-    print(f"Initializing embedding model: {EMBEDDING_MODEL_NAME} on {device}...")
+    log(f"Initializing embedding model: {EMBEDDING_MODEL_NAME} on {device}...")
     embeddings = HuggingFaceEmbeddings(
         model_name=EMBEDDING_MODEL_NAME,
         model_kwargs={'device': device, 'trust_remote_code': True}
     )
     
     # Initialize Semantic Chunker
-    print("Initializing Semantic Chunker...")
+    log("Initializing Semantic Chunker...")
     chunker = SemanticChunker(
         embeddings=embeddings,
         breakpoint_threshold_type="percentile",
@@ -99,18 +111,22 @@ def main():
     )
     
     # Load Data
-    print("Loading data...")
-    if not os.path.exists("chapter_structure.json"):
-        print("Error: chapter_structure.json not found.")
+    log("Loading data...")
+    try:
+        raw_items = load_and_process_data(file_input)
+        log(f"Loaded {len(raw_items)} broad sections/subsections.")
+    except Exception as e:
+        log(f"Error loading data: {e}")
         return
-
-    raw_items = load_and_process_data("chapter_structure.json")
-    print(f"Loaded {len(raw_items)} broad sections/subsections.")
     
     # Chunk Data
-    print("Chunking data...")
+    log("Chunking data...")
     documents = []
-    for item in raw_items:
+    
+    # Update progress for chunking (allocating 20% of progress)
+    total_raw = len(raw_items)
+    
+    for idx, item in enumerate(raw_items):
         chunks = chunker.create_documents([item["text"]])
         for i, chunk in enumerate(chunks):
             # Enrich metadata
@@ -120,11 +136,15 @@ def main():
             chunk_metadata["has_equations"] = "$" in chunk.page_content or "\\" in chunk.page_content
             
             documents.append(Document(page_content=chunk.page_content, metadata=chunk_metadata))
+        
+        if progress_callback:
+            # First 20% for chunking
+            progress_callback(int((idx + 1) / total_raw * 20))
             
-    print(f"Generated {len(documents)} semantic chunks.")
+    log(f"Generated {len(documents)} semantic chunks.")
     
     # Initialize Qdrant
-    print(f"Initializing Qdrant at {QDRANT_PATH}...")
+    log(f"Initializing Qdrant at {QDRANT_PATH}...")
     client = QdrantClient(path=QDRANT_PATH)
     
     # Re-create collection
@@ -135,22 +155,24 @@ def main():
         
     client.create_collection(
         collection_name=COLLECTION_NAME,
-        vectors_config=VectorParams(size=768, distance=Distance.COSINE)
+        vectors_config=VectorParams(size=768, distance=Distance.COSINE) # Nomic-embed-text-v1.5 is 768d
     )
     
     # Upload points
-    print("Generating embeddings and uploading to Qdrant...")
-    points = []
+    log("Generating embeddings and uploading to Qdrant...")
     
     # Generate embeddings for all chunks in batches to manage memory
     batch_size = 32
     total_docs = len(documents)
+    total_batches = (total_docs + batch_size - 1) // batch_size
     
     for i in range(0, total_docs, batch_size):
         batch_docs = documents[i:i+batch_size]
         batch_texts = [doc.page_content for doc in batch_docs]
         
-        print(f"Embedding batch {i // batch_size + 1}/{(total_docs + batch_size - 1) // batch_size}...")
+        current_batch_num = i // batch_size + 1
+        log(f"Embedding batch {current_batch_num}/{total_batches}...")
+        
         embeddings_list = embeddings.embed_documents(batch_texts)
         
         current_points = []
@@ -169,9 +191,17 @@ def main():
             collection_name=COLLECTION_NAME,
             points=current_points
         )
-        print(f"Uploaded batch {i // batch_size + 1}")
         
-    print("Ingestion complete!")
+        if progress_callback:
+            # Remaining 80% for embedding/uploading
+            # 20 + (current_batch / total_batches * 80)
+            progress = 20 + int(current_batch_num / total_batches * 80)
+            progress_callback(min(progress, 100))
+            
+    log("Ingestion complete!")
 
 if __name__ == "__main__":
-    main()
+    if os.path.exists("chapter_structure.json"):
+        ingest_data("chapter_structure.json")
+    else:
+        print("chapter_structure.json not found.")

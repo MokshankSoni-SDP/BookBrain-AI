@@ -39,6 +39,25 @@ class PhysicsRetriever:
             trust_remote_code=True
         )
         
+        
+    def check_connection(self) -> bool:
+        try:
+            self.client.get_collections()
+            return True
+        except Exception as e:
+            print(f"Connection check failed: {e}")
+            return False
+
+    def get_collection_stats(self) -> Dict[str, Any]:
+        try:
+            collection_info = self.client.get_collection(COLLECTION_NAME)
+            return {
+                'vectors_count': collection_info.vectors_count,
+                'status': collection_info.status
+            }
+        except Exception:
+            return {'vectors_count': 0, 'status': 'unknown'}
+
     def retrieve(self, query: str, top_k: int = 20) -> List[Any]:
         """
         Stage 1: Dense Retrieval from Qdrant
