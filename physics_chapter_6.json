@@ -1,0 +1,1225 @@
+{
+    "chapter_title": "SYSTEMS OF PARTICLES AND ROTATIONAL MOTION",
+    "sections": [
+        {
+            "id": "6.1",
+            "title": "6.1 INTRODUCTION",
+            "content": [
+                {
+                    "type": "text",
+                    "value": "In the earlier chapters we primarily considered the motionof a single particle. (A particle is ideally represented as apoint mass having no size.)  We applied the results of ourstudy even to the motion of bodies of finite size, assumingthat motion of such bodies can be described in terms of themotion of a particle.Any real body which we encounter in daily life has afinite size.  In dealing with the motion of extended bodies(bodies of finite size) often the idealised model of a particle isinadequate.  In this chapter we shall try to go beyond thisinadequacy.  We shall attempt to build an understanding ofthe motion of extended bodies.  An extended body, in thefirst place, is a system of particles.  We shall begin with theconsideration of motion of the system as a whole.  The centreof mass of a system of particles will be a key concept here.We shall discuss the motion of the centre of mass of a systemof particles and usefulness of this concept in understandingthe motion of extended bodies.A large class of problems with extended bodies can besolved by considering them to be rigid bodies.  Ideally arigid body is a body with a perfectly definite andunchanging shape.  The distances between all pairs ofparticles of such a body do not change. It is evident fromthis definition of a rigid body that no real body is truly rigid,since real bodies deform under the influence of forces. But inmany situations the deformations are negligible.  In a numberof situations involving bodies such as wheels, tops, steelbeams, molecules and planets on the other hand, we can ignorethat they warp (twist out of shape), bend or vibrate and treatthem as rigid."
+                }
+            ],
+            "subsections": [
+                {
+                    "id": "6.1.1",
+                    "title": "6.1.1 What kind of motion can a rigid body have?",
+                    "content": [
+                        {
+                            "type": "text",
+                            "value": "Let us try to explore this question by taking some examplesof the motion of rigid bodies.  Let us begin with a rectangular"
+                        },
+                        {
+                            "type": "text",
+                            "value": "most common way to constrain a rigid body sothat it does not have translational motion is tofix it along a straight line. The only possiblemotion of such a rigid body is rotation. The lineor fixed axis about which the body is rotating isits axis of rotation. If you look around, you willcome across many examples of rotation aboutan axis, a ceiling fan, a potter\u2019s wheel, a giantwheel in a fair, a merry-go-round and so on (Fig6.3(a) and (b))."
+                        },
+                        {
+                            "type": "text",
+                            "value": "(a)"
+                        },
+                        {
+                            "type": "image",
+                            "path": "./extracted_images\\page_2_img_2.png",
+                            "metadata": {
+                                "bbox": [
+                                    389.0,
+                                    479.0,
+                                    422.0,
+                                    486.0
+                                ]
+                            }
+                        },
+                        {
+                            "type": "text",
+                            "value": "(b)Fig. 6.3 Rotation about a fixed axis(a) A ceiling fan(b) A potter\u2019s wheel."
+                        },
+                        {
+                            "type": "text",
+                            "value": "Let us try to understand what rotation is,what characterises rotation.  You may notice thatin rotation of a rigid body about a fixed axis,"
+                        },
+                        {
+                            "type": "text",
+                            "value": "Fig. 6.5 (a) A spinning top(The point of contact of the top with theground, its tip O, is fixed.)"
+                        },
+                        {
+                            "type": "text",
+                            "value": "Axis of oscillation"
+                        },
+                        {
+                            "type": "image",
+                            "path": "./extracted_images\\page_3_img_3.png",
+                            "metadata": {
+                                "bbox": [
+                                    370.5503845214844,
+                                    244.00074768066406,
+                                    563.6502685546875,
+                                    431.15081787109375
+                                ]
+                            }
+                        },
+                        {
+                            "type": "text",
+                            "value": "Axis ofrotationfrom blades"
+                        },
+                        {
+                            "type": "text",
+                            "value": "Fig. 6.5 (b)An oscillating table fan with rotatingblades. The pivot of the fan, point O, isfixed. The blades of the fan are underrotational motion, whereas, the axis ofrotation of  the fan blades is oscillating."
+                        },
+                        {
+                            "type": "text",
+                            "value": "In some examples of rotation, however, theaxis may not be fixed.  A prominent example ofthis kind of rotation is a top spinning in place[Fig. 6.5(a)].  (We assume that the top does notslip from place to place and so does not havetranslational motion.)  We know from experiencethat the axis of such a spinning top movesaround the vertical through its point of contactwith the ground, sweeping out a cone as shownin Fig. 6.5(a).  (This movement of the axis of thetop around the vertical is termed precession.)Note, the point of contact of the top withground is fixed. The axis of rotation of the topat any instant passes through the point ofcontact. Another simple example of this kind ofrotation is the oscillating table fan or a pedestalfan [Fig.6.5(b)]. You may have observed that the"
+                        },
+                        {
+                            "type": "text",
+                            "value": "Thus, for us rotation will be about a fixed axisonly unless stated otherwise.The rolling motion of a cylinder down aninclined plane is a combination of rotation abouta fixed axis and translation.  Thus, the\u2018something else\u2019 in the case of rolling motionwhich we referred to earlier is rotational motion.You will find Fig. 6.6(a) and (b) instructive fromthis point of view. Both these figures showmotion of the same body along identicaltranslational trajectory. In one case, Fig. 6.6(a),the motion is a pure translation; in the othercase [Fig. 6.6(b)] it is a combination of translationand rotation. (You may try to reproduce the twotypes of motion shown, using a rigid object likea heavy book.)We now recapitulate the most importantobservations of the present section: The motionof a rigid body which is not pivoted or fixed insome way is either a pure translation or acombination of translation and rotation. Themotion of a rigid body which is pivoted or fixedin some way is rotation.  The rotation may beabout an axis that is fixed (e.g. a ceiling fan) ormoving (e.g. an oscillating table fan [Fig.6.5(b)]).We shall, in the present chapter, considerrotational motion about a fixed axis only."
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "6.2",
+            "title": "6.2  CENTRE OF MASS",
+            "content": [
+                {
+                    "type": "text",
+                    "value": "We shall first see what the centre of mass of asystem of particles is and then discuss itssignificance. For simplicity we shall start witha two particle system. We shall take the linejoining the two particles to be the x- axis."
+                },
+                {
+                    "type": "text",
+                    "value": "Fig. 6.7"
+                },
+                {
+                    "type": "text",
+                    "value": "Let the distances of the two particles be x1and x2 respectively from some origin O. Let m1and m2 be respectively the masses of the two"
+                },
+                {
+                    "type": "text",
+                    "value": "123123()33m yyyyyyYm++++=="
+                },
+                {
+                    "type": "text",
+                    "value": "Thus, for three particles of equal mass, thecentre of mass coincides with the centroid of thetriangle formed by the particles.Results of Eqs. (6.3a) and (6.3b) aregeneralised easily to a system of n particles, notnecessarily lying in a plane, but distributed inspace. The centre of mass of such a system isat (X, Y, Z ), where"
+                },
+                {
+                    "type": "text",
+                    "value": "iim xXM= \u2211(6.4a)"
+                },
+                {
+                    "type": "text",
+                    "value": "iim yYM= \u2211(6.4b)"
+                },
+                {
+                    "type": "text",
+                    "value": "iim zZM= \u2211(6.4c)"
+                },
+                {
+                    "type": "text",
+                    "value": "and"
+                },
+                {
+                    "type": "text",
+                    "value": "Here M = im\u2211is the total mass of the"
+                },
+                {
+                    "type": "text",
+                    "value": "system. The index i runs from 1 to n; mi is themass of the ith particle and the position of theith particle is given by (xi, yi, zi).Eqs. (6.4a), (6.4b) and (6.4c) can becombined into one equation using the notation"
+                },
+                {
+                    "type": "text",
+                    "value": "of position vectors. Let  ir  be the position vectorof the ith particle and R be the position vector ofthe centre of mass:"
+                },
+                {
+                    "type": "text",
+                    "value": "\u0001iiiixyz=++rijk\u0275\u0275"
+                },
+                {
+                    "type": "text",
+                    "value": "and \u0001XYZ=++Rijk\u0275\u0275"
+                },
+                {
+                    "type": "text",
+                    "value": "M= \u2211rR"
+                },
+                {
+                    "type": "text",
+                    "value": "i im"
+                },
+                {
+                    "type": "text",
+                    "value": "Then"
+                },
+                {
+                    "type": "text",
+                    "value": "(6.4d)The sum on the right hand side is a vectorsum.Note the economy of expressions we achieveby use of vectors. If the origin of the frame ofreference (the coordinate system) is chosen to"
+                },
+                {
+                    "type": "text",
+                    "value": "be the centre of mass then  0i im=\u2211rfor the"
+                },
+                {
+                    "type": "text",
+                    "value": "given system of particles.A rigid body, such as a metre stick or aflywheel, is a system of closely packed particles;Eqs. (6.4a), (6.4b), (6.4c) and (6.4d) are therefore,applicable to a rigid body. The number ofparticles (atoms or molecules) in such a body isso large that it is impossible to carry out thesummations over individual particles in theseequations. Since the spacing of the particles is"
+                },
+                {
+                    "type": "text",
+                    "value": "Let us consider a thin rod, whose width andbreath (in case the cross section of the rod isrectangular) or radius (in case the cross sectionof the rod is cylindrical) is much smaller thanits length. Taking the origin to be at thegeometric centre of the rod and x-axis to bealong the length of the rod, we can say that onaccount of reflection symmetry, for everyelement dm of the rod at x, there is an elementof the same mass dm located at \u2013x (Fig. 6.8)."
+                },
+                {
+                    "type": "text",
+                    "value": "The net contribution of every such pair to"
+                },
+                {
+                    "type": "text",
+                    "value": "the integral and hence the integral  itselfis zero.  From Eq. (6.6), the point for which theintegral  itself is zero, is the centre of mass.Thus, the centre of mass of a homogenous thinrod coincides with its geometric centre. This canbe understood on the basis of reflection symmetry.The same symmetry argument will apply tohomogeneous rings, discs, spheres, or eventhick rods of circular or rectangular crosssection. For all such bodies you will realise thatfor every element dm at a point (x, y, z) one canalways take an element of the same mass atthe point (\u2013x, \u2013y, \u2013z). (In other words, the originis a point of reflection symmetry for thesebodies.) As a result, the integrals in Eq. (6.5 a)all are zero. This means that for all the abovebodies, their centre of mass coincides with theirgeometric centre."
+                },
+                {
+                    "type": "text",
+                    "value": "Example 6.1 Find the centre of mass ofthree particles at the vertices of anequilateral triangle. The masses of theparticles are 100g, 150g, and 200grespectively. Each side of the equilateraltriangle is 0.5m long."
+                },
+                {
+                    "type": "text",
+                    "value": "u"
+                },
+                {
+                    "type": "text",
+                    "value": "Answer"
+                },
+                {
+                    "type": "text",
+                    "value": "concurrence of the medians, i.e. on the centroidG of the triangle.      \u22b3"
+                },
+                {
+                    "type": "text",
+                    "value": "u"
+                },
+                {
+                    "type": "text",
+                    "value": "Example 6.3 Find the centre of mass of auniform L-shaped lamina (a thin flat plate)with dimensions as shown. The mass ofthe lamina is 3 kg."
+                },
+                {
+                    "type": "text",
+                    "value": "Answer  Choosing the X and Y axes as shownin Fig. 6.11 we have the coordinates of thevertices of the L-shaped lamina as given in thefigure. We can think of theL-shape to consist of 3 squares each of length1m. The mass of each square is 1kg, since thelamina is uniform. The centres of mass C1, C2and C3 of the squares are, by symmetry, theirgeometric centres and have coordinates (1/2,1/2),(3/2,1/2), (1/2,3/2) respectively. We take themasses of the squares to be concentrated atthese points. The centre of mass of the wholeL shape (X, Y) is the centre of mass of thesemass points."
+                },
+                {
+                    "type": "text",
+                    "value": "Fig. 6.11"
+                },
+                {
+                    "type": "text",
+                    "value": "Hence"
+                },
+                {
+                    "type": "text",
+                    "value": "[]()"
+                },
+                {
+                    "type": "text",
+                    "value": "111 kgX++=++ 5 m6="
+                },
+                {
+                    "type": "text",
+                    "value": "1(1/2)1(3/2)1(1/2) kg m"
+                },
+                {
+                    "type": "text",
+                    "value": "[]()"
+                },
+                {
+                    "type": "text",
+                    "value": "1(1/2)1(1/2)1(3/2)kg m5 m111 kg6Y  ++  ==++"
+                },
+                {
+                    "type": "text",
+                    "value": "The centre of mass of the L-shape lies onthe line OD. We could have guessed this withoutcalculations. Can you tell why? Suppose, thethree squares that make up the L shaped lamina"
+                },
+                {
+                    "type": "text",
+                    "value": "Thus, the total mass of a system of particlestimes the acceleration of its centre of mass isthe vector sum of all the forces acting on thesystem of particles."
+                },
+                {
+                    "type": "text",
+                    "value": "Note when we talk of the force 1F on the firstparticle, it is not a single force, but the vectorsum of all the forces on the first particle; likewisefor the second particle etc. Among these forceson each particle there will be external forcesexerted by bodies outside the system and alsointernal forces exerted by the particles on oneanother. We know from Newton\u2019s third law thatthese internal forces occur in equal and oppositepairs and in the sum of forces of Eq. (6.10), theircontribution is zero. Only the external forcescontribute to the equation. We can then rewriteEq. (6.10) as"
+                },
+                {
+                    "type": "text",
+                    "value": "extM=AF(6.11)"
+                },
+                {
+                    "type": "text",
+                    "value": "where extF represents the sum of all externalforces acting on the particles of the system.Eq. (6.11) states that the centre of mass ofa system of particles moves as if all the massof the system was concentrated at the centreof mass and all the external forces wereapplied at that point.Notice, to determine the motion of the centreof mass no knowledge of internal forces of thesystem of particles is required; for this purposewe need to know only the external forces.To obtain Eq. (6.11) we did not need to specifythe nature of the system of particles. The systemmay be a collection of particles in which theremay be all kinds of internal motions, or it maybe a rigid body which has either puretranslational motion or a combination oftranslational and rotational motion. Whateveris the system and the motion of its individualparticles, the centre of mass moves accordingto Eq. (6.11).Instead of treating extended bodies as singleparticles as we have done in earlier chapters,we can now treat them as systems of particles.We can obtain the translational component oftheir motion, i.e. the motion of the centre of massof the system, by taking the mass of the wholesystem to be concentrated at the centre of massand all the external forces on the system to beacting at the centre of mass.This is the procedure that we followed earlierin analysing forces on bodies and solving"
+                },
+                {
+                    "type": "text",
+                    "value": "where F is the force on the particle. Let usconsider a system of n particles with masses m1,"
+                },
+                {
+                    "type": "text",
+                    "value": "m2,...mn respectively and velocities 12,,.......nvvvrespectively. The particles may be interactingand have external forces acting on them. The"
+                },
+                {
+                    "type": "text",
+                    "value": "linear momentum of the first particle is 11m v ,"
+                },
+                {
+                    "type": "text",
+                    "value": "of the second particle is 22m v  and so on.For the system of n particles, the linearmomentum of the system is defined to be thevector sum of all individual particles of thesystem,"
+                },
+                {
+                    "type": "text",
+                    "value": "12...n=+++Pppp"
+                },
+                {
+                    "type": "text",
+                    "value": "1122...nnmmm=+++vvv(6.14)Comparing this with Eq. (6.8)"
+                },
+                {
+                    "type": "text",
+                    "value": "M=PV(6.15)Thus, the total momentum of a system ofparticles is equal to the product of the totalmass of the system and the velocity of itscentre of mass. Differentiating Eq. (6.15) withrespect to time,"
+                },
+                {
+                    "type": "text",
+                    "value": "ddddMMtt==PVA(6.16)"
+                },
+                {
+                    "type": "text",
+                    "value": "Comparing Eq.(6.16) and Eq. (6.11),"
+                },
+                {
+                    "type": "text",
+                    "value": "d"
+                },
+                {
+                    "type": "text",
+                    "value": "extt =PF(6.17)"
+                },
+                {
+                    "type": "text",
+                    "value": "d"
+                },
+                {
+                    "type": "text",
+                    "value": "This is the statement of Newton\u2019s second lawof motion extended to a system of particles.Suppose now, that the sum of externalforces acting on a system of particles is zero.Then from Eq.(6.17)"
+                },
+                {
+                    "type": "text",
+                    "value": "ord0dt =PP  = Constant(6.18a)"
+                },
+                {
+                    "type": "text",
+                    "value": "Thus, when the total external force actingon a system of particles is zero, the total linearmomentum of the system is constant. This isthe law of conservation of the total linearmomentum of a system of particles. Because ofEq. (6.15), this also means that when thetotal external force on the system is zerothe velocity of the centre of mass remainsconstant. (We assume throughout thediscussion on systems of particles in thischapter that the total mass of the systemremains constant.)Note that on account of the internal forces,i.e. the forces exerted by the particles on oneanother, the individual particles may have"
+                },
+                {
+                    "type": "text",
+                    "value": "(a)(b)"
+                },
+                {
+                    "type": "text",
+                    "value": "Fig. 6.14 (a) Trajectories of two stars, S1 (dotted line)and S2 (solid line) forming a binarysystem with their centre of mass C inuniform motion.(b) The same binary system, with thecentre of mass C at rest."
+                },
+                {
+                    "type": "text",
+                    "value": "move back to back with their centre of massremaining at rest as shown in Fig.6.13 (b).In many problems on the system ofparticles, as in the above radioactive decayproblem, it is convenient to work in the centreof mass frame rather than in the laboratoryframe of reference.In astronomy, binary (double) stars is acommon occurrence. If there are no externalforces, the centre of mass of a double starmoves like a free particle, as shown in Fig.6.14(a). The trajectories of the two stars of equalmass are also shown in the figure; they lookcomplicated. If we go to the centre of massframe, then we find that there the two starsare moving in a circle, about the centre ofmass, which is at rest. Note that the positionof the stars have to be diametrically oppositeto each other [Fig. 6.14(b)]. Thus in our frameof reference, the trajectories of the stars are acombination of (i) uniform motion in a straightline of the centre of mass and (ii) circularorbits of the stars about the centre of mass.As can be seen from the two examples,separating the motion of different parts of asystem into motion of the centre of mass andmotion about the centre of mass is a veryuseful technique that helps in understandingthe motion of the system."
+                }
+            ],
+            "subsections": []
+        },
+        {
+            "id": "6.5",
+            "title": "6.5  VECTOR PRODUCT OF TWO VECTORS",
+            "content": [
+                {
+                    "type": "text",
+                    "value": "We are already familiar with vectors and theiruse in physics. In chapter 5 (Work, Energy, Power)we defined the scalar product of two vectors. Animportant physical quantity, work, is defined asa scalar product of two vector quantities, forceand displacement."
+                },
+                {
+                    "type": "text",
+                    "value": "A simpler version of the right hand rule isthe following : Open up your right hand palmand curl the fingers pointing from  a to b. Yourstretched thumb points in the direction of c.It should be remembered that there are twoangles between any two vectors  a and b . InFig. 6.15 (a) or (b) they correspond to \u03b8 (as shown)and (3600\u2013 \u03b8). While applying either of the aboverules, the rotation should be taken through thesmaller angle (<1800) between  a and b. It is \u03b8here.Because of the cross (\u00d7) used to denote thevector product, it is also referred to as cross product.\u2022Note that scalar product of two vectors iscommutative as said earlier, a.b = b.aThe vector product, however, is notcommutative, i.e. a \u00d7 b \u2260 b \u00d7 aThe magnitude of both a \u00d7 b and b \u00d7 a is thesame (sinab\u03b8 ); also, both of them areperpendicular to the plane of  a and b. But therotation of the right-handed screw in case ofa \u00d7 b  is from  a to b, whereas in case of  b \u00d7 a itis from b to a. This means the two vectors arein opposite directions. We have"
+                },
+                {
+                    "type": "text",
+                    "value": "\u00d7= \u2212\u00d7abba\u2022Another interesting property of a vectorproduct is its behaviour under reflection.Under reflection (i.e. on taking the planemirror image) we have"
+                },
+                {
+                    "type": "text",
+                    "value": "and ,xx yyzz\u2192\u2212\u2192\u2212\u2192\u2212. As a result allthe components of a vector change sign andthus ,aa\u2192\u2212bb\u2192\u2212. What happens toa \u00d7 b under reflection?a \u00d7 b()()\u2192\u2212\u00d7 \u2212=\u00d7ababThus, a \u00d7 b does not change sign underreflection.\u2022Both scalar and vector products aredistributive with respect to vector addition.Thus,"
+                },
+                {
+                    "type": "text",
+                    "value": ".()..+=+a bca ba c"
+                },
+                {
+                    "type": "text",
+                    "value": "()\u00d7+=\u00d7+\u00d7abcabac\u2022We may write c = a \u00d7 b in the componentform. For this we first need to obtain someelementary cross products:(i) a \u00d7 a = 0 (0 is a null vector, i.e. a vectorwith zero magnitude)This follows since magnitude of a \u00d7 a  is"
+                },
+                {
+                    "type": "text",
+                    "value": "2 sin00a\u00b0 =."
+                },
+                {
+                    "type": "text",
+                    "value": "\u02c6\u02c6\u02c6"
+                },
+                {
+                    "type": "text",
+                    "value": "ijk"
+                },
+                {
+                    "type": "text",
+                    "value": "\u02c6\u02c6\u02c634575"
+                },
+                {
+                    "type": "text",
+                    "value": "\u00d7=\u2212=\u2212\u2212"
+                },
+                {
+                    "type": "text",
+                    "value": "abijk"
+                },
+                {
+                    "type": "text",
+                    "value": "\u2212\u2212"
+                },
+                {
+                    "type": "text",
+                    "value": "213"
+                },
+                {
+                    "type": "text",
+                    "value": "Note  \u02c6\u02c6\u02c675\u00d7= \u2212++baijk  \u22b3"
+                }
+            ],
+            "subsections": []
+        },
+        {
+            "id": "6.6",
+            "title": "6.6 ANGULAR VELOCITY AND ITS RELATIONWITH LINEAR VELOCITY",
+            "content": [
+                {
+                    "type": "text",
+                    "value": "In this section we shall study what is angularvelocity and its role in rotational motion. Wehave seen that every particle of a rotating bodymoves in a circle. The linear velocity of theparticle is related to the angular velocity. Therelation between these two quantities involvesa vector product which we learnt about in thelast section.Let us go back to Fig. 6.4. As said above, inrotational motion of a rigid body about a fixedaxis, every particle of the body moves in a circle,"
+                },
+                {
+                    "type": "text",
+                    "value": "Fig. 6.16Rotation about a fixed axis. (A particle (P)of the rigid body rotating about the fixed(z-) axis moves in a circle with centre (C)on the axis.)"
+                },
+                {
+                    "type": "text",
+                    "value": "which lies in a plane perpendicular to the axisand has its centre on the axis. In Fig. 6.16 weredraw Fig. 6.4, showing a typical particle (at apoint P) of the rigid body rotating about a fixedaxis (taken as the z-axis). The particle describes"
+                },
+                {
+                    "type": "text",
+                    "value": "and points out in the direction in which a righthanded screw would advance, if the head of thescrew is rotated with the body. (See Fig. 6.17a)."
+                },
+                {
+                    "type": "text",
+                    "value": "The magnitude of this vector is ddt\u03c9\u03b8=referred as above."
+                },
+                {
+                    "type": "text",
+                    "value": "Fig. 6.17 (a) If the head of a right handed screwrotates with the body, the screwadvances in the direction of the angularvelocity \u03c9. If the sense (clockwise oranticlockwise) of rotation of the bodychanges, so does the direction of \u03c9."
+                },
+                {
+                    "type": "text",
+                    "value": "Fig. 6.17 (b)The angular velocity vector \u03c9 is directedalong the fixed axis as shown. The linearvelocity of the particle at P is v = \u03c9 \u00d7 r.It is  perpendicular to both \u03c9 \u03c9 \u03c9 \u03c9 \u03c9 and r andis  directed along the tangent to the circledescribed by the particle."
+                },
+                {
+                    "type": "text",
+                    "value": "We shall now look at what the vectorproduct \u03c9 \u00d7 r corresponds to. Refer to Fig.6.17(b) which is a part of Fig. 6.16 reproducedto show the path of the particle P. The figureshows the vector \u03c9 directed along the fixed (z\u2013)axis and also the position vector  r = OP  of theparticle at P of the rigid body with respect tothe origin O. Note that the origin is chosen tobe on the axis of rotation."
+                },
+                {
+                    "type": "text",
+                    "value": "If the axis of rotation is fixed, the directionof \u03c9 \u03c9 \u03c9 \u03c9 \u03c9 and hence, that of \u03b1 is fixed. In this casethe vector equation reduces to a scalar equation"
+                },
+                {
+                    "type": "text",
+                    "value": "\u03c9\u03b1 =(6.22)"
+                },
+                {
+                    "type": "text",
+                    "value": "d"
+                },
+                {
+                    "type": "text",
+                    "value": "dt"
+                }
+            ],
+            "subsections": []
+        },
+        {
+            "id": "6.7",
+            "title": "6.7  TORQUE AND ANGULAR MOMENTUM",
+            "content": [
+                {
+                    "type": "text",
+                    "value": "In this section, we shall acquaint ourselves withtwo physical quantities (torque and angularmomentum) which are defined as vector productsof two vectors. These as we shall see, areespecially important in the discussion of motionof systems of particles, particularly rigid bodies."
+                }
+            ],
+            "subsections": [
+                {
+                    "id": "6.7.1",
+                    "title": "6.7.1 Moment of force (Torque)",
+                    "content": [
+                        {
+                            "type": "text",
+                            "value": "We have learnt that the motion of a rigid body,in general, is a combination of rotation andtranslation. If the body is fixed at a point or alonga line, it has only rotational motion. We knowthat force is needed to change the translationalstate of a body, i.e. to produce linearacceleration. We may then ask, what is theanalogue of force in the case of rotationalmotion? To look into the question in a concretesituation let us take the example of opening orclosing of a door. A door is a rigid body whichcan rotate about a fixed vertical axis passingthrough the hinges. What makes the doorrotate? It is clear that unless a force is appliedthe door does not rotate. But any force does notdo the job. A force applied to the hinge linecannot produce any rotation at all, whereas aforce of given magnitude applied at right anglesto the door at its outer edge is most effective inproducing rotation. It is not the force alone, buthow and where the force is applied is importantin rotational motion.The rotational analogue of force in linearmotion is moment of force. It is also referred toas torque or couple. (We shall use the wordsmoment of force and torque interchangeably.)We shall first define the moment of force for thespecial case of a single particle. Later on weshall extend the concept to systems of particlesincluding rigid bodies. We shall also relate it toa change in the state of rotational motion, i.e. isangular acceleration of a rigid body."
+                        },
+                        {
+                            "type": "text",
+                            "value": "of the line of action of F from the origin and"
+                        },
+                        {
+                            "type": "text",
+                            "value": "(sin )FF\u03b8\u22a5=is the component of F in thedirection perpendicular to r. Note that \u03c4 = 0 ifr = 0, F = 0 or \u03b8 = 00 or 1800 . Thus, the momentof a force vanishes if either the magnitude ofthe force is zero, or if the line of action of theforce passes through the origin.One may note that since  r \u00d7 F is a vectorproduct, properties of a vector product of twovectors apply to it. If the direction of F isreversed, the direction of the moment of forceis reversed. If directions of both r and F arereversed, the direction of the moment of forceremains the same."
+                        }
+                    ]
+                },
+                {
+                    "id": "6.7.2",
+                    "title": "6.7.2 Angular momentum of a particle",
+                    "content": [
+                        {
+                            "type": "text",
+                            "value": "Just as the moment of a force is the rotationalanalogue of force in linear motion, the quantityangular momentum is the rotational analogueof linear momentum. We shall first defineangular momentum for the special case of asingle particle and look at its usefulness in thecontext of single particle motion. We shall thenextend the definition of angular momentum tosystems of particles including rigid bodies.Like moment of a force, angular momentumis also a vector product. It could also be referredto as moment of (linear) momentum. From thisterm one could guess how angular momentumis defined.Consider a particle of mass m and linearmomentum p at a position r relative to the originO. The angular momentum l of the particle withrespect to the origin O is defined to bel = r \u00d7 p(6.25a)The magnitude of the angular momentumvector is"
+                        },
+                        {
+                            "type": "text",
+                            "value": "sinlr p=\u03b8(6.26a)where p is the magnitude of p and \u03b8 is the anglebetween r and p. We may write"
+                        },
+                        {
+                            "type": "text",
+                            "value": "lr p\u22a5= or r p\u22a5                                  (6.26b)"
+                        },
+                        {
+                            "type": "text",
+                            "value": "where r\u22a5 (= r sin\u03b8) is the perpendicular distanceof the directional line of  p from the origin and"
+                        },
+                        {
+                            "type": "text",
+                            "value": "(sin )pp\u03b8\u22a5= is the component of p in a directionperpendicular to r. We expect the angularmomentum to be zero (l = 0), if the linearmomentum vanishes (p = 0), if the particle is atthe origin (r = 0), or if the directional line of  ppasses through the origin \u03b8 = 00 or 1800."
+                        },
+                        {
+                            "type": "text",
+                            "value": "An experiment with the bicycle rim"
+                        },
+                        {
+                            "type": "text",
+                            "value": "Take abicycle rimand extendits axle onboth sides.Tie twos t r i n g sat both endsA and B,as shownin thea d j o i n i n gfigure.  Holdboth thes t r i n g stogether inone hand such that the rim is vertical. If youleave one string, the rim will tilt. Now keepingthe rim in vertical position with both the stringsin one hand, put the wheel in fast rotationaround the axle with the other hand. Then leaveone string, say B, from your hand, and observewhat happens.The rim keeps rotating in a vertical planeand the plane of rotation turns around the stringA which you are holding. We say that the axisof rotation of the rim or equivalentlyits angular momentum precesses about thestring A.The rotating rim gives rise to an angularmomentum. Determine the direction of thisangular momentum. When you are holding therotating rim with string A, a torque is generated.(We leave it to you to find out how the torque isgenerated and what its direction is.) The effectof the torque on the angular momentum is tomake it precess around an axis perpendicularto both the angular momentum and the torque.Verify all these statements."
+                        },
+                        {
+                            "type": "text",
+                            "value": "InitiallyAfter"
+                        },
+                        {
+                            "type": "text",
+                            "value": "particle has mass mi and velocity vi) We maywrite the total angular momentum of a systemof particles as"
+                        },
+                        {
+                            "type": "text",
+                            "value": "(6.25b)"
+                        },
+                        {
+                            "type": "text",
+                            "value": "This is a generalisation of the definition ofangular momentum (Eq. 6.25a) for a singleparticle to a system of particles.Using Eqs. (6.23) and (6.25b), we get"
+                        },
+                        {
+                            "type": "text",
+                            "value": "Note that like Eq.(6.17), Eq.(6.28b) holdsgood for any system of particles, whether it is arigid body or its individual particles have allkinds of internal motion."
+                        },
+                        {
+                            "type": "text",
+                            "value": "Conservation of angular momentum"
+                        },
+                        {
+                            "type": "text",
+                            "value": "If \u03c4ext = 0, Eq. (6.28b) reduces to"
+                        },
+                        {
+                            "type": "text",
+                            "value": "Ld0dt ="
+                        },
+                        {
+                            "type": "text",
+                            "value": "or         L = constant.(6.29a)Thus, if the total external torque on a systemof particles is zero, then the total angularmomentum of the system is conserved, i.e.remains constant. Eq. (6.29a) is equivalent tothree scalar equations,Lx = K1, Ly = K2 and Lz = K3(6.29 b)Here K1, K2 and K3 are constants; Lx, Ly andLz are the components of the total angularmomentum vector L along the x,y and z axesrespectively. The statement that the totalangular momentum is conserved means thateach of these three components is conserved.Eq. (6.29a) is the rotational analogue ofEq. (6.18a), i.e. the conservation law of the totallinear momentum for a system of  particles.Like Eq. (6.18a), it has applications in manypractical situations. We shall look at a few ofthe interesting applications later on inthis chapter."
+                        },
+                        {
+                            "type": "text",
+                            "value": "u"
+                        },
+                        {
+                            "type": "text",
+                            "value": "Example 6.5  Find the torque of a force"
+                        },
+                        {
+                            "type": "text",
+                            "value": "+  \u2013  about the origin. The force acts ona particle whose position vector is  ."
+                        },
+                        {
+                            "type": "text",
+                            "value": "Answer  Here  rijk\u02c6\u02c6\u02c6=\u2212+    and Fijk\u02c6\u02c6\u02c6735=+\u2212.We shall use the determinant rule to find thetorque \u03c4 = r \u00d7 F"
+                        },
+                        {
+                            "type": "text",
+                            "value": "or \u22b3"
+                        },
+                        {
+                            "type": "text",
+                            "value": "Example 6.6  Show that the angularmomentum about any point of a singleparticle moving with constant velocityremains constant throughout the motion."
+                        },
+                        {
+                            "type": "text",
+                            "value": "u"
+                        },
+                        {
+                            "type": "text",
+                            "value": "acceleration nor angular acceleration. This means(1)the total force, i.e. the vector sum of theforces, on the rigid body is zero;"
+                        },
+                        {
+                            "type": "text",
+                            "value": "n0(6.30a)"
+                        },
+                        {
+                            "type": "text",
+                            "value": "=\u2211...nii"
+                        },
+                        {
+                            "type": "text",
+                            "value": "FFFF121+++=="
+                        },
+                        {
+                            "type": "text",
+                            "value": "If the total force on the body is zero, thenthe total linear momentum of the body doesnot change with time. Eq. (6.30a) gives thecondition for the translational equilibriumof the body.(2)The total torque, i.e. the vector sum of thetorques on the rigid body is zero,"
+                        },
+                        {
+                            "type": "text",
+                            "value": "n0\u03c4     \u03c4           \u03c4          \u03c4(6.30b)"
+                        },
+                        {
+                            "type": "text",
+                            "value": "=\u2211...nii"
+                        },
+                        {
+                            "type": "text",
+                            "value": "121+++=="
+                        },
+                        {
+                            "type": "text",
+                            "value": "If the total torque on the rigid body is zero,the total angular momentum of the body doesnot change with time. Eq. (6.30 b) gives thecondition for the rotational equilibrium of thebody.One may raise a question, whether therotational equilibrium condition [Eq. 6.30(b)]remains valid, if the origin with respect to whichthe torques are taken is shifted. One can showthat if the translational equilibrium condition[Eq. 6.30(a)] holds for a rigid body, then such ashift of origin does not matter, i.e. the rotationalequilibrium condition is independent of thelocation of the origin about which the torquesare taken. Example 6.7 gives a proof of this resultin a special case of a couple, i.e. two forcesacting on a rigid body in translationalequilibrium. The generalisation of this result ton forces is left as an exercise.Eq. (6.30a) and Eq. (6.30b), both, are vectorequations. They are equivalent to three scalarequations each. Eq. (6.30a) corresponds to"
+                        },
+                        {
+                            "type": "text",
+                            "value": "n="
+                        },
+                        {
+                            "type": "text",
+                            "value": "n="
+                        },
+                        {
+                            "type": "text",
+                            "value": "n="
+                        },
+                        {
+                            "type": "text",
+                            "value": "=\u22110"
+                        },
+                        {
+                            "type": "text",
+                            "value": "=\u22110"
+                        },
+                        {
+                            "type": "text",
+                            "value": "=\u22110"
+                        },
+                        {
+                            "type": "text",
+                            "value": "Fixi"
+                        },
+                        {
+                            "type": "text",
+                            "value": "1, Fiyi"
+                        },
+                        {
+                            "type": "text",
+                            "value": "1 andFizi"
+                        },
+                        {
+                            "type": "text",
+                            "value": "1  (6.31a)"
+                        },
+                        {
+                            "type": "text",
+                            "value": "where Fix, Fiy and Fiz are respectively the x, y andz components of the forces Fi. Similarly, Eq.(6.30b) is equivalent to three scalar equations"
+                        },
+                        {
+                            "type": "text",
+                            "value": "n="
+                        },
+                        {
+                            "type": "text",
+                            "value": "n="
+                        },
+                        {
+                            "type": "text",
+                            "value": "=\u22110"
+                        },
+                        {
+                            "type": "text",
+                            "value": "=\u22110"
+                        },
+                        {
+                            "type": "text",
+                            "value": "1\u03c4 and       (6.31b)"
+                        },
+                        {
+                            "type": "text",
+                            "value": "1\u03c4, iyi"
+                        },
+                        {
+                            "type": "text",
+                            "value": "ixi"
+                        },
+                        {
+                            "type": "text",
+                            "value": "where \u03c4ix, \u03c4iy  and  \u03c4iz are respectively the x, y andz components of the torque \u03c4i .Eq. (6.31a) and (6.31b) give six independentconditions to be satisfied for mechanical"
+                        },
+                        {
+                            "type": "text",
+                            "value": "Fig. 6.20 (b)"
+                        },
+                        {
+                            "type": "text",
+                            "value": "The force at B in Fig. 6.20(a) is reversed inFig. 6.20(b). Thus, we have the same rod withtwo forces of equal magnitude but acting inopposite diretions applied perpendicular to therod, one at end A and the other at end B. Herethe moments of both the forces are equal, butthey are not opposite; they act in the same senseand cause anticlockwise rotation of the rod.  Thetotal force on the body is zero; so the body is intranslational equilibrium; but it is not inrotational equilibrium. Although the rod is notfixed in any way, it undergoes pure rotation (i.e.rotation without translation).A pair of forces of equal magnitude but actingin opposite directions with different lines ofaction is known as a couple or torque. A coupleproduces rotation without translation.When we open the lid of a bottle by turningit, our fingers are applying a couple to the lid[Fig. 6.21(a)]. Another known example is acompass needle in the earth\u2019s magnetic field asshown in the Fig. 6.21(b). The earth\u2019s magneticfield exerts equal forces on the north and southpoles. The force on the North Pole is towardsthe north, and the force on the South Pole istoward the south. Except when the needle pointsin the north-south direction; the two forces donot have the same line of action. Thus there isa couple acting on the needle due to the earth\u2019smagnetic field."
+                        },
+                        {
+                            "type": "image",
+                            "path": "./extracted_images\\page_19_img_4.png",
+                            "metadata": {
+                                "bbox": [
+                                    337.5,
+                                    532.7500610351562,
+                                    534.2999877929688,
+                                    678.550048828125
+                                ]
+                            }
+                        },
+                        {
+                            "type": "text",
+                            "value": "Fig. 6.21(a) Our fingers apply a couple to turnthe lid."
+                        },
+                        {
+                            "type": "text",
+                            "value": "length. This point is called the fulcrum. A see-saw on the children\u2019s playground is a typicalexample of a lever. Two forces F1 and F2, parallelto each other and usually perpendicular to thelever, as shown here, act on the lever atdistances d1 and d2 respectively from the fulcrumas shown in Fig. 6.23."
+                        },
+                        {
+                            "type": "text",
+                            "value": "Fig. 6.23"
+                        },
+                        {
+                            "type": "text",
+                            "value": "The lever is a system in mechanicalequilibrium. Let R be the reaction of the supportat the fulcrum; R is directed opposite to theforces  F1 and F2. For translational equilibrium,"
+                        },
+                        {
+                            "type": "text",
+                            "value": "R \u2013 F1 \u2013 F2 = 0(i)"
+                        },
+                        {
+                            "type": "text",
+                            "value": "For considering rotational equilibrium wetake the moments about the fulcrum; the sumof moments must be zero,d1F1 \u2013 d2F2 = 0(ii)Normally the anticlockwise (clockwise)moments are taken to be positive (negative). NoteR acts at the fulcrum itself and has zero momentabout the fulcrum.In the case of the lever force F1 is usuallysome weight to be lifted. It is called the load andits distance from the fulcrum d1 is called theload arm. Force F2 is the effort applied to lift theload; distance d2 of the effort from the fulcrumis the effort arm.Eq. (ii) can be written asd1F1 = d2 F2(6.32a)or load arm \u00d7 load = effort arm \u00d7 effortThe above equation expresses the principleof moments for a lever. Incidentally the ratioF1/F2 is called the Mechanical Advantage (M.A.);"
+                        },
+                        {
+                            "type": "text",
+                            "value": "FdFd=(6.32b)"
+                        },
+                        {
+                            "type": "text",
+                            "value": "12"
+                        },
+                        {
+                            "type": "text",
+                            "value": "M.A. ="
+                        },
+                        {
+                            "type": "text",
+                            "value": "21"
+                        },
+                        {
+                            "type": "text",
+                            "value": "If the effort arm d2 is larger than the loadarm, the mechanical advantage is greater thanone. Mechanical advantage greater than onemeans that a small effort can be used to lift alarge load. There are several examples of a leveraround you besides the see-saw. The beam of abalance is a lever. Try to find more such"
+                        },
+                        {
+                            "type": "text",
+                            "value": "The CG of the cardboard is so located thatthe total torque on it due to the forces m1g, m2g\u2026.  etc. is zero.If  ri is the position vector of the ith particleof an extended body with respect to its CG, thenthe torque about the CG, due to the force ofgravity on the particle  is \u03c4i = ri \u00d7 mi g. The totalgravitational torque about the CG is zero, i.e."
+                        },
+                        {
+                            "type": "text",
+                            "value": "\u03c4\u03c4giiim==\u00d7=\u2211\u2211rg0(6.33)"
+                        },
+                        {
+                            "type": "text",
+                            "value": "We may therefore, define the CG of a bodyas that point where the total gravitational torqueon the body is zero.We notice that in Eq. (6.33), g is the samefor all particles, and hence it comes out of thesummation. This gives, since g is non-zero,"
+                        },
+                        {
+                            "type": "text",
+                            "value": "\u2211mi ir  = 0. Remember that the position vectors"
+                        },
+                        {
+                            "type": "text",
+                            "value": "(ri) are taken with respect to the CG. Now, inaccordance with the reasoning given belowEq. (6.4a) in Sec. 6.2, if the sum is zero, the originmust be the centre of mass of the body. Thus,the centre of gravity of the body coincides withthe centre of mass in uniform gravity or gravity-"
+                        },
+                        {
+                            "type": "text",
+                            "value": "Fig. 6.25 Determining the centre of gravity of a bodyof irregular shape. The centre of gravity Glies on the vertical AA1 through the pointof suspension of the body A."
+                        },
+                        {
+                            "type": "text",
+                            "value": "= 30 cm, PG = 5 cm, AK1= BK2 = 10 cm and K1G =K2G = 25 cm. Also, W= weight of the rod = 4.00kg and W 1= suspended load = 6.00 kg;R1 and R2 are the normal reactions of thesupport at the knife edges.For translational equilibrium of the rod,R1+R2 \u2013W1 \u2013W = 0(i)Note W1 and W act vertically down and R1and R2 act vertically up.For considering rotational equilibrium, wetake moments of the forces. A convenient pointto take moments about is G. The moments ofR2 and W1 are anticlockwise (+ve), whereas themoment of R1 is clockwise (-ve).For rotational equilibrium,\u2013R1 (K1G) + W1 (PG) + R2 (K2G) = 0(ii)It is given that W = 4.00g N and W1 = 6.00gN, where g = acceleration due to gravity. Wetake g = 9.8 m/s2.With numerical values inserted, from (i)R1 + R2 \u2013 4.00g \u2013 6.00g = 0or R1 + R2 = 10.00g  N(iii)               = 98.00 NFrom (ii), \u2013 0.25 R1 + 0.05 W1 + 0.25 R2 = 0or R1 \u2013 R2 = 1.2g  N = 11.76 N(iv)From (iii) and (iv), R1 = 54.88 N,R2 = 43.12 NThus the reactions of the support are about55 N at K1 and 43 N at K2.  \u22b3"
+                        },
+                        {
+                            "type": "text",
+                            "value": "u"
+                        },
+                        {
+                            "type": "text",
+                            "value": "Example 6.9  A 3m long ladder weighing20 kg leans on a frictionless wall. Its feetrest on the floor 1 m from the wall as shownin Fig.6.27. Find the reaction forces of thewall and the floor."
+                        },
+                        {
+                            "type": "text",
+                            "value": "Answer"
+                        },
+                        {
+                            "type": "text",
+                            "value": "Fig. 6.27"
+                        },
+                        {
+                            "type": "text",
+                            "value": "from the axis, the linear velocity is iir\u03c5\u03c9=. Thekinetic energy of motion of this particle is"
+                        },
+                        {
+                            "type": "text",
+                            "value": "2221122iiii ikmm r\u03c5\u03c9=="
+                        },
+                        {
+                            "type": "text",
+                            "value": "where mi is the mass of the particle. The totalkinetic energy K of the body is then given bythe sum of the kinetic energies of individualparticles,"
+                        },
+                        {
+                            "type": "text",
+                            "value": "nn"
+                        },
+                        {
+                            "type": "text",
+                            "value": "1()2"
+                        },
+                        {
+                            "type": "text",
+                            "value": "====\u2211\u2211"
+                        },
+                        {
+                            "type": "text",
+                            "value": "22"
+                        },
+                        {
+                            "type": "text",
+                            "value": "ii iiiKkm r \u03c9"
+                        },
+                        {
+                            "type": "text",
+                            "value": "11"
+                        },
+                        {
+                            "type": "text",
+                            "value": "Here n is the number of particles in the body.Note \u03c9 is the same for all particles. Hence, taking\u03c9 out of the sum,"
+                        },
+                        {
+                            "type": "text",
+                            "value": "n"
+                        },
+                        {
+                            "type": "text",
+                            "value": "1()2"
+                        },
+                        {
+                            "type": "text",
+                            "value": "==\u2211"
+                        },
+                        {
+                            "type": "text",
+                            "value": "22"
+                        },
+                        {
+                            "type": "text",
+                            "value": "i iiKm r\u03c9"
+                        },
+                        {
+                            "type": "text",
+                            "value": "1"
+                        },
+                        {
+                            "type": "text",
+                            "value": "We define a new parameter characterisingthe rigid body, called the moment of inertia I ,given by"
+                        },
+                        {
+                            "type": "text",
+                            "value": "n"
+                        },
+                        {
+                            "type": "text",
+                            "value": "== \u2211(6.34)"
+                        },
+                        {
+                            "type": "text",
+                            "value": "2"
+                        },
+                        {
+                            "type": "text",
+                            "value": "i iiIm r"
+                        },
+                        {
+                            "type": "text",
+                            "value": "1"
+                        },
+                        {
+                            "type": "text",
+                            "value": "With this definition,"
+                        },
+                        {
+                            "type": "text",
+                            "value": "212KI\u03c9=(6.35)"
+                        },
+                        {
+                            "type": "text",
+                            "value": "Note that the parameter I is independent ofthe magnitude of the angular velocity. It is acharacteristic of the rigid body and the axisabout which it rotates.Compare Eq. (6.35) for the kinetic energy ofa rotating body with the expression for thekinetic energy of a body in linear (translational)motion,"
+                        },
+                        {
+                            "type": "text",
+                            "value": "212Km \u03c5="
+                        },
+                        {
+                            "type": "text",
+                            "value": "Here, m is the mass of the body and v is itsvelocity. We have already noted the analogybetween angular velocity \u03c9 (in respect ofrotational motion about a fixed axis) and linearvelocity v (in respect of linear motion). It is thenevident that the parameter, moment of inertiaI, is the desired rotational analogue of mass inlinear motion. In rotation (about a fixed axis),the moment of inertia plays a similar role asmass does in linear motion.We now apply the definition Eq. (6.34), tocalculate the moment of inertia in two simple cases."
+                        },
+                        {
+                            "type": "text",
+                            "value": "change in its rotational motion, it can beregarded as a measure of rotational inertia ofthe body; it is a measure of the way in whichdifferent parts of the body are distributed atdifferent distances from the axis. Unlike themass of a body, the moment of inertia is not afixed quantity but depends on distribution ofmass about the axis of rotation, and theorientation and position of the axis of rotationwith respect to the body as a whole. As ameasure of the way in which the mass of arotating rigid body is distributed with respect tothe axis of rotation, we can define a newparameter, the radius of gyration. It is relatedto the moment of inertia and the total mass ofthe body.Notice from the Table 6.1 that in allcases, we can write I = Mk2, where k hasthe dimension of length. For a rod, aboutthe perpendicular axis at its midpoint,"
+                        },
+                        {
+                            "type": "text",
+                            "value": "i.e.22 12,kL= =12kL. Similarly, k = R/2for the circular disc about its diameter. Thelength k is a geometric property of the body andaxis of rotation. It is called the radius ofgyration. The radius of gyration of a bodyabout an axis may be defined as the distancefrom the axis of a mass point whose mass isequal to the mass of the whole body and whosemoment of inertia is equal to the moment ofinertia of the body about the axis.Thus, the moment of inertia of a rigid bodydepends on the mass of the body, its shape andsize; distribution of mass about the axis ofrotation, and the position and orientation of theaxis of rotation.From the definition, Eq. (6.34), we can inferthat the dimensions of moments of inertia areML2 and its SI units are kg m2.The property of this extremely importantquantity I, as a measure of rotational inertia ofthe body, has been put to a great practical use.The machines, such as steam engine and theautomobile engine, etc., that produce rotationalmotion have a disc with a large moment ofinertia, called a flywheel. Because of its largemoment of inertia, the flywheel resists thesudden increase or decrease of the speed of thevehicle. It allows a gradual change in the speedand prevents jerky motions, thereby ensuringa smooth ride for the passengers on the vehicle."
+                        },
+                        {
+                            "type": "text",
+                            "value": "translation. We wish to take this analogy further.In doing so we shall restrict the discussion onlyto rotation about fixed axis. This case of motioninvolves only one degree of freedom, i.e., needsonly one independent variable to describe themotion. This in translation corresponds to linear"
+                        },
+                        {
+                            "type": "text",
+                            "value": "Fig.6.29Specifying the angular position of a rigidbody."
+                        },
+                        {
+                            "type": "text",
+                            "value": "u"
+                        },
+                        {
+                            "type": "text",
+                            "value": "Example 6.10 Obtain Eq. (6.36) from firstprinciples."
+                        },
+                        {
+                            "type": "text",
+                            "value": "Answer   The angular acceleration is uniform,hence"
+                        },
+                        {
+                            "type": "text",
+                            "value": "dconstantt\u03c9\u03b1==(i)"
+                        },
+                        {
+                            "type": "text",
+                            "value": "d"
+                        },
+                        {
+                            "type": "text",
+                            "value": "Integrating this equation,"
+                        },
+                        {
+                            "type": "text",
+                            "value": "\u03c9\u03b1=+\u222bdtc"
+                        },
+                        {
+                            "type": "text",
+                            "value": "(as is constant)tc\u03b1\u03b1=+At t = 0,  \u03c9 = \u03c90 (given)From (i) we get at t = 0, \u03c9 = c = \u03c90Thus, \u03c9 = \u03b1t + \u03c90  as required.With the definition of \u03c9 = d\u03b8/dt we mayintegrate Eq. (6.36) to get Eq. (6.37). Thisderivation and the derivation of Eq. (6.38) is leftas an exercise."
+                        },
+                        {
+                            "type": "text",
+                            "value": "Example 6.11  The angular speed of amotor wheel is increased from 1200 rpm to3120 rpm in 16 seconds. (i) What is itsangular acceleration, assuming theacceleration to be uniform? (ii) How manyrevolutions does the engine make duringthis time?"
+                        },
+                        {
+                            "type": "text",
+                            "value": "u"
+                        },
+                        {
+                            "type": "text",
+                            "value": "Answer(i)We shall use \u03c9 = \u03c90 + \u03b1t"
+                        },
+                        {
+                            "type": "text",
+                            "value": "\u03c90 =  initial angular speed in rad/s"
+                        },
+                        {
+                            "type": "text",
+                            "value": "It is, however, necessary that thesecorrespondences are established on sounddynamical considerations. This is what we nowturn to.Before we begin, we note a simplificationthat arises in the case of rotational motionabout a fixed axis. Since the axis is fixed, onlythose components of torques, which are alongthe direction of the fixed axis need to beconsidered in our discussion. Only thesecomponents can cause the body to rotate aboutthe axis. A component of the torqueperpendicular to the axis of rotation will tend toturn the axis from its position. We specificallyassume that there will arise necessary forces ofconstraint to cancel the effect of theperpendicular components of the (external)torques, so that the fixed position of the axiswill be maintained. The perpendicularcomponents of the torques, therefore need notbe taken into account. This means that for ourcalculation of torques on a rigid body:(1) We need to consider only those forces thatlie in planes perpendicular to the axis.Forces which are parallel to the axis will givetorques perpendicular to the axis and neednot be taken into account.(2) We need to consider only those componentsof the position vectors which areperpendicular to the axis. Components ofposition vectors along the axis will result intorques perpendicular to the axis and neednot be taken into account."
+                        },
+                        {
+                            "type": "text",
+                            "value": "Work done by a torque"
+                        },
+                        {
+                            "type": "text",
+                            "value": "Fig. 6.30 Work done by a force F1 acting on aparticle of a body rotating about a fixedaxis; the particle describes a circular pathwith centre C on the axis;  arc P1P\u20321(ds1)gives the displacement of the particle."
+                        },
+                        {
+                            "type": "text",
+                            "value": "If there are more than one forces acting onthe body, the work done by all of them can beadded to give the total work done on the body.Denoting the magnitudes of the torques due tothe different forces as \u03c41, \u03c42, \u2026  etc,"
+                        },
+                        {
+                            "type": "text",
+                            "value": "12d(...)dW\u03c4\u03c4\u03b8=++"
+                        },
+                        {
+                            "type": "text",
+                            "value": "Remember, the forces giving rise to thetorques act on different particles, but theangular displacement d\u03b8 is the same for allparticles. Since all the torques considered areparallel to the fixed axis, the magnitude \u03c4 of thetotal torque is just the algebraic sum of themagnitudes of the torques, i.e., \u03c4 = \u03c41 + \u03c42 + .....We, therefore, have"
+                        },
+                        {
+                            "type": "text",
+                            "value": "ddW\u03c4 \u03b8=(6.39)"
+                        },
+                        {
+                            "type": "text",
+                            "value": "This expression gives the work done by thetotal (external) torque \u03c4 which acts on the bodyrotating about a fixed axis. Its similarity withthe corresponding expressiondW= F dsfor linear (translational) motion is obvious.Dividing both sides of Eq. (6.39) by dt gives"
+                        },
+                        {
+                            "type": "text",
+                            "value": "ddddWPtt\u03b8\u03c4\u03c4\u03c9==="
+                        },
+                        {
+                            "type": "text",
+                            "value": "or P\u03c4\u03c9=(6.40)This is the instantaneous power. Comparethis expression for power in the case of rotationalmotion about a fixed axis with that of power inthe case of linear motion,P = FvIn a perfectly rigid body there is no internalmotion. The work done by external torques is"
+                        },
+                        {
+                            "type": "text",
+                            "value": "Answer"
+                        },
+                        {
+                            "type": "text",
+                            "value": "Fig. 6.31"
+                        },
+                        {
+                            "type": "text",
+                            "value": "(a)We useI \u03b1 = \u03c4the torque\u03c4 = F R= 25 \u00d7 0.20 Nm (as R = 0.20m)                        = 5.0 NmI = Moment of inertia of flywheel about its"
+                        },
+                        {
+                            "type": "text",
+                            "value": "2"
+                        },
+                        {
+                            "type": "text",
+                            "value": "2MR="
+                        },
+                        {
+                            "type": "text",
+                            "value": "axis"
+                        },
+                        {
+                            "type": "text",
+                            "value": "220.0(0.2)2\u00d7 = 0.4 kg m2"
+                        },
+                        {
+                            "type": "text",
+                            "value": "="
+                        },
+                        {
+                            "type": "text",
+                            "value": "\u03b1 = angular acceleration   = 5.0 N m/0.4 kg m2 = 12.5 s\u20132"
+                        },
+                        {
+                            "type": "text",
+                            "value": "(b) Work done by the pull unwinding 2m of thecord= 25 N \u00d7 2m = 50 J(c) Let \u03c9 be the final angular velocity. The"
+                        },
+                        {
+                            "type": "text",
+                            "value": "212 I\u03c9 ,"
+                        },
+                        {
+                            "type": "text",
+                            "value": "kinetic energy gained ="
+                        },
+                        {
+                            "type": "text",
+                            "value": "since the wheel starts from rest. Now,"
+                        },
+                        {
+                            "type": "text",
+                            "value": "22002,0\u03c9\u03c9\u03b1\u03b8\u03c9=+="
+                        },
+                        {
+                            "type": "text",
+                            "value": "The angular displacement \u03b8 = length ofunwound string / radius of wheel= 2m/0.2 m = 10 rad"
+                        },
+                        {
+                            "type": "text",
+                            "value": "\u03c922212 510 0250=\u00d7\u00d7=..)(rad/s"
+                        },
+                        {
+                            "type": "text",
+                            "value": "\u2234"
+                        },
+                        {
+                            "type": "text",
+                            "value": "(d) The answers are the same, i.e. the kinetic energygained by the wheel = work   done by the force.There is no loss of energy due to friction.   \u22b3"
+                        },
+                        {
+                            "type": "text",
+                            "value": "For computing the total angular momentumof the whole rigid body, we add up thecontribution of each particle of the body.Thus"
+                        },
+                        {
+                            "type": "text",
+                            "value": "We denote by \u22a5L  and zL  the components of"
+                        },
+                        {
+                            "type": "text",
+                            "value": "L  respectively perpendicular to the z-axis andalong the z-axis;"
+                        },
+                        {
+                            "type": "text",
+                            "value": "LOCv\u22a5=\u00d7\u2211iiim(6.42a)"
+                        },
+                        {
+                            "type": "text",
+                            "value": "where mi and vi are respectively the mass andthe velocity of the ith particle and Ci is the centreof the circle described by the particle;"
+                        },
+                        {
+                            "type": "text",
+                            "value": "and"
+                        },
+                        {
+                            "type": "text",
+                            "value": "or\u02c6\u03c9=LkzI(6.42b)"
+                        },
+                        {
+                            "type": "text",
+                            "value": "The last step follows since the perpendiculardistance of the ith particle from the axis is ri; andby definition the moment of inertia of the body"
+                        },
+                        {
+                            "type": "text",
+                            "value": "about the axis of rotation is Im ri i=\u22112 ."
+                        },
+                        {
+                            "type": "text",
+                            "value": "Notez\u22a5=+LLL(6.42c)The rigid bodies which we have mainlyconsidered in this chapter are symmetric aboutthe axis of rotation, i.e. the axis of rotation isone of their symmetry axes. For such bodies, fora given OCi, for every particle which has avelocity vi , there is another particle of velocity\u2013vi  located diametrically opposite on the circlewith centre Ci described by the particle. Together"
+                        },
+                        {
+                            "type": "text",
+                            "value": "such pairs will contribute zero to \u22a5L  and as a"
+                        },
+                        {
+                            "type": "text",
+                            "value": "result for symmetric bodies \u22a5L  is zero, andhence"
+                        },
+                        {
+                            "type": "text",
+                            "value": "\u02c6\u03c9==LLkzI(6.42d)"
+                        },
+                        {
+                            "type": "text",
+                            "value": "For bodies, which are not symmetric aboutthe axis of rotation, L is not equal to Lz and henceL does not lie along the axis of rotation.Referring to Table 6.1, can you tell in whichcases L = Lz will not apply?Let us differentiate Eq. (6.42b). Since \u02c6k is afixed (constant) vector, we get"
+                        },
+                        {
+                            "type": "text",
+                            "value": "ddddztt ILk() =()\uf8eb\uf8ed\uf8ec\uf8f6\uf8f8\uf8f7\u03c9\u02c6"
+                        },
+                        {
+                            "type": "text",
+                            "value": "Now, Eq. (6.28b) states"
+                        },
+                        {
+                            "type": "text",
+                            "value": "d"
+                        },
+                        {
+                            "type": "text",
+                            "value": "dt =L\u03c4"
+                        },
+                        {
+                            "type": "text",
+                            "value": "We have already derived this equation usingthe work - kinetic energy route."
+                        }
+                    ]
+                },
+                {
+                    "id": "6.12.1",
+                    "title": "6.12.1 Conservation of angular momentum",
+                    "content": [
+                        {
+                            "type": "text",
+                            "value": "We are now in a position to revisit the principleof conservation of angular momentum in thecontext of rotation about a fixed axis. From Eq.(6.43c), if the external torque is zero,Lz = I\u03c9 = constant(6.44)For symmetric bodies, from Eq. (6.42d), Lzmay be replaced by L .(L and Lz  are respectivelythe magnitudes of L and Lz.)This then is the required form, for fixed axisrotation, of Eq. (6.29a), which expresses thegeneral law of conservation of angular momentumof a system of particles.  Eq. (6.44) applies to manysituations that we come across in daily life.  Youmay do this experiment with your friend.  Sit on aswivel chair (a chair with a seat, free to rotateabout a pivot) with your arms folded and feet notresting on, i.e., away from, the ground.  Ask yourfriend to rotate the chair rapidly. While the chairis rotating with considerable angular speedstretch your arms horizontally.  What happens?Your angular speed is reduced.  If you bring backyour arms closer to your body, the angular speedincreases again.  This is a situation where theprinciple of conservation of angular momentumis applicable. If friction in the rotational"
+                        },
+                        {
+                            "type": "image",
+                            "path": "./extracted_images\\page_31_img_5.png",
+                            "metadata": {
+                                "bbox": [
+                                    403.3727722167969,
+                                    513.4588623046875,
+                                    511.1656494140625,
+                                    660.4701538085938
+                                ]
+                            }
+                        },
+                        {
+                            "type": "text",
+                            "value": "Fig 6.32 (b)An acrobat employing the principle ofconservation of angular momentum inher performance."
+                        },
+                        {
+                            "type": "text",
+                            "value": "A circus acrobat and a diver take advantageof this principle.  Also, skaters and classical,Indian or western, dancers performing apirouette (a spinning about a tip\u2013top) on the toesof one foot display \u2018mastery\u2019 over this principle.Can you explain?"
+                        },
+                        {
+                            "type": "text",
+                            "value": "212KI\u03c9=."
+                        },
+                        {
+                            "type": "text",
+                            "value": "Fig. 6.33"
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "exercises": [],
+    "intro_blob": [
+        {
+            "type": "image",
+            "path": "./extracted_images\\page_1_img_1.png",
+            "metadata": {
+                "bbox": [
+                    481.79998779296875,
+                    58.349700927734375,
+                    566.7498779296875,
+                    143.29962158203125
+                ]
+            }
+        },
+        {
+            "type": "text",
+            "value": "CHAPTER SIX"
+        }
+    ]
+}
