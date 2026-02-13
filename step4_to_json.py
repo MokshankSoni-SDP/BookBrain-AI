@@ -46,11 +46,13 @@ def build_hierarchy(classified_items):
 
     return root
 
+def save_structure(structure, output_path):
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(structure, f, indent=4, ensure_ascii=False)
+    print(f"Saved structure to: {output_path}")
+
 if __name__ == "__main__":
-    raw_data = classify_and_clean()
+    raw_data = classify_and_clean() # uses config defaults
     structured_json = build_hierarchy(raw_data)
-    
-    with open(config.OUTPUT_JSON, "w", encoding="utf-8") as f:
-        json.dump(structured_json, f, indent=4, ensure_ascii=False)
-    
+    save_structure(structured_json, config.OUTPUT_JSON)
     print(f"Success! Reverted to older string-list pattern in: {config.OUTPUT_JSON}")

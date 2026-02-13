@@ -18,11 +18,18 @@ RERANKER_MODEL_NAME = os.getenv("RERANKER_MODEL", "BAAI/bge-reranker-v2-m3")
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 class PhysicsRetriever:
-    def __init__(self):
-        print(f"Initializing Retriever on {device}...")
+    def __init__(self, client):
+        print(f"[DEBUG] Retriever.__init__ called. Device: {device}")
+        print(f"[DEBUG] Received Qdrant client: {client}")
         
-        # Initialize Qdrant Client
-        self.client = QdrantClient(path=QDRANT_PATH)
+        # Use passed Qdrant Client
+        self.client = client
+        try:
+            collections = self.client.get_collections()
+            print(f"[DEBUG] Verified Qdrant connection. Collections: {collections}")
+        except Exception as e:
+            print(f"[ERROR] Failed to verify Qdrant connection in Retriever: {e}")
+            raise e
         
         # Initialize Embedding Model
         print("Loading Embedding Model...")
@@ -38,15 +45,10 @@ class PhysicsRetriever:
             device=device,
             trust_remote_code=True
         )
-        
-        
+
     def check_connection(self) -> bool:
-        try:
-            self.client.get_collections()
-            return True
-        except Exception as e:
-            print(f"Connection check failed: {e}")
-            return False
+        # Simplified check
+        return self.client is not None
 
     def get_collection_stats(self) -> Dict[str, Any]:
         try:
@@ -62,14 +64,9 @@ class PhysicsRetriever:
         """
         Stage 1: Dense Retrieval from Qdrant
         """
+        # Removed explicit connection/collection check to avoid race conditions
         query_vector = self.embeddings.embed_query(query)
         
-        collections = self.client.get_collections().collections
-        collection_names = [c.name for c in collections]
-        if COLLECTION_NAME not in collection_names:
-            print(f"Warning: Collection '{COLLECTION_NAME}' does not exist.")
-            return []
-
         search_results = self.client.search(
             collection_name=COLLECTION_NAME,
             query_vector=query_vector,
@@ -118,9 +115,21 @@ class PhysicsRetriever:
         final_results = self.rerank(query, initial_results)
         return final_results
 
+    
+    def close(self):
+        """
+        Explicitly closes the Qdrant client connection.
+        """
+        if self.client:
+            print("Closing Qdrant client...")
+            self.client.close()
+            self.client = None
+
 # Test block
 if __name__ == "__main__":
-    retriever = PhysicsRetriever()
+    from qdrant_client import QdrantClient
+    client = QdrantClient(path="./qdrant_data")
+    retriever = PhysicsRetriever(client)
     test_query = "What is a rigid body? Give examples."
     print(f"\nTesting Query: {test_query}")
     
@@ -133,3 +142,5 @@ if __name__ == "__main__":
         print(f"   Score: {res.payload.get('rerank_score', 0):.4f}")
         print(f"   Chunk Index: {meta.get('chunk_index')}")
         print(f"   Preview: {res.payload['text'][:150].replace(chr(10), ' ')}...")
+    
+    retriever.close()

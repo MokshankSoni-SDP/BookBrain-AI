@@ -30,12 +30,16 @@ def get_diagram_bbox(page, caption_block, split_x):
         
     return diagram_box + (-5, -5, 5, 5)
 
-def classify_and_clean():
-    doc = fitz.open(config.PDF_PATH)
+def classify_and_clean(pdf_path=None, image_output_dir=None):
+    # Default to config if not provided
+    target_pdf = pdf_path if pdf_path else config.PDF_PATH
+    target_image_dir = image_output_dir if image_output_dir else config.IMAGE_DIR
+
+    doc = fitz.open(target_pdf)
     all_items = []
     
-    if not os.path.exists(config.IMAGE_DIR):
-        os.makedirs(config.IMAGE_DIR)
+    if not os.path.exists(target_image_dir):
+        os.makedirs(target_image_dir)
 
     for page_num, page in enumerate(doc):
         split_x = page.rect.width * config.COLUMN_GAP_THRESHOLD
@@ -54,7 +58,7 @@ def classify_and_clean():
                     # Extracts the ID (e.g., '6.1') and formats it as 'fig_6_1.png'
                     fig_id = match.group(1).replace('.', '_')
                     img_filename = f"fig_{fig_id}.png"
-                    img_path = os.path.join(config.IMAGE_DIR, img_filename)
+                    img_path = os.path.join(target_image_dir, img_filename)
                     
                     pix = page.get_pixmap(clip=area, matrix=fitz.Matrix(3, 3))
                     pix.save(img_path)
@@ -84,7 +88,13 @@ def classify_and_clean():
 
         # Insert Diagram Markers into respective columns
         for d in diagrams_on_page:
-            marker = {"type": "DIAGRAM", "bbox": d["bbox"], "value": f"[IMAGE: {d['path']}]", "caption": d["caption"]}
+            # We want the path in the JSON to be relative or absolute?
+            # The ingestion script expects just the filename in the tag usually, or we can keep full path.
+            # Ingest logic: cleans path separators, grabs filename. 
+            # So full path here is fine, ingest will handle it.
+            # But let's standardize separators to be safe.
+            normalized_path = d["path"].replace("\\", "/")
+            marker = {"type": "DIAGRAM", "bbox": d["bbox"], "value": f"[IMAGE: {normalized_path}]", "caption": d["caption"]}
             if d["is_left"]: left_col.append(marker)
             else: right_col.append(marker)
 

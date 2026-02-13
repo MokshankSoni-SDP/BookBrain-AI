@@ -3,3 +3,11 @@ venv
 __pycache__
 extract_images
 .env
+processed_data
+# Ignore Qdrant local storage
+qdrant_data
+# Ignore any specific lock files just in case
+*.lock
+
+# Ignore Qdrant local storage
+qdrant_data/
