@@ -35,9 +35,12 @@ def load_and_process_data(file_input: Any) -> List[Dict[str, Any]]:
     processed_items = []
     # If the root is a list, iterate; if dict (single chapter), wrap in list
     chapters = data if isinstance(data, list) else [data]
+    print(f"[DEBUG] ingest.py: Loaded JSON. Found {len(chapters)} chapter objects.")
     
-    for chapter in chapters:
+    for i, chapter in enumerate(chapters):
         chapter_title = chapter.get("chapter_title", "Unknown Chapter")
+        sections = chapter.get("sections", [])
+        print(f"[DEBUG] Chapter {i+1}: '{chapter_title}' has {len(sections)} sections.")
         
         for section in chapter.get("sections", []):
             section_number = section.get("section_number") or section.get("id", "")
@@ -145,25 +148,22 @@ def ingest_data(file_input: Any, progress_callback=None, status_callback=None, c
     for idx, item in enumerate(raw_items):
         chunks = chunker.create_documents([item["text"]])
         for i, chunk in enumerate(chunks):
-            # Extract images from content
+            # NEW: Track both references and full paths
             image_refs = []
+            image_paths = [] 
             matches = image_pattern.findall(chunk.page_content)
             
             for match in matches:
-                # match is like "./extract_images\\fig_6_2.png"
-                # We want just "fig_6_2" for flexible matching later
                 # Normalize path separators
                 clean_path = match.replace("\\", "/")
-                filename = clean_path.split("/")[-1] # fig_6_2.png
-                basename = os.path.splitext(filename)[0] # fig_6_2
+                image_paths.append(clean_path) # Store the actual path
+                
+                filename = clean_path.split("/")[-1]
+                basename = os.path.splitext(filename)[0]
                 image_refs.append(basename)
-                print(f"   -> Found Image Ref: {basename} (from {match})")
+                print(f"   -> Found Image Path: {clean_path}")
 
-            # Clean content (Optional: remove tags or keep them? Keeping them for now but maybe cleaning is better)
-            # improved_content = image_pattern.sub("", chunk.page_content) 
-            # Let's keep the tag in text so LLM knows where it was, but maybe format it?
-            # actually user asked "no need to send it to llm can tell llm that we also have an image"
-            # So let's replace with a placeholder [Figure] to save tokens and avoid checking nonexistent paths
+            # Clean content for LLM
             clean_content = image_pattern.sub("[Figure]", chunk.page_content)
 
             # Enrich metadata
@@ -171,7 +171,10 @@ def ingest_data(file_input: Any, progress_callback=None, status_callback=None, c
             chunk_metadata["chunk_index"] = i
             chunk_metadata["estimated_tokens"] = len(clean_content) // 4
             chunk_metadata["has_equations"] = "$" in chunk.page_content or "\\" in chunk.page_content
-            chunk_metadata["image_refs"] = list(set(image_refs)) # Deduplicate
+            
+            # STORE BOTH: refs for logic, paths for display
+            chunk_metadata["image_refs"] = list(set(image_refs))
+            chunk_metadata["image_paths"] = list(set(image_paths))
             
             documents.append(Document(page_content=clean_content, metadata=chunk_metadata))
         
@@ -180,6 +183,11 @@ def ingest_data(file_input: Any, progress_callback=None, status_callback=None, c
             progress_callback(int((idx + 1) / total_raw * 20))
             
     log(f"Generated {len(documents)} semantic chunks.")
+
+    if not documents:
+        log("[WARNING] No chunks generated. Aborting ingestion to preserve existing data.")
+        return
+
     
     # Initialize Qdrant
     if client is None:

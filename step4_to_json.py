@@ -44,6 +44,10 @@ def build_hierarchy(classified_items):
             if "preamble" not in root: root["preamble"] = []
             root["preamble"].append(ivalue)
 
+    print(f"[DEBUG] build_hierarchy: Found {len(root['sections'])} sections.")
+    for sec in root["sections"]:
+        print(f"    - Section {sec['id']}: {sec['title']} (Content: {len(sec['content'])} blocks, Subsections: {len(sec['subsections'])})")
+
     return root
 
 def save_structure(structure, output_path):

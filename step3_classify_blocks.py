@@ -111,5 +111,13 @@ def classify_and_clean(pdf_path=None, image_output_dir=None):
                 all_items.append({"type": "CONTENT", "value": item["value"]})
                 all_items.append({"type": "CONTENT", "value": item["caption"]})
 
+    # Summary Log
+    print(f"[DEBUG] classify_and_clean: Processed {len(doc)} pages.")
+    print(f"[DEBUG] classify_and_clean: Found {len(all_items)} classified items.")
+    if all_items:
+        print(f"[DEBUG] First 3 items: {all_items[:3]}")
+    else:
+        print("[DEBUG] WARNING: No items classified!")
+
     doc.close()
     return all_items

@@ -39,12 +39,12 @@ class PhysicsRetriever:
         )
         
         # Initialize Reranker
-        print("Loading Reranker Model...")
-        self.reranker = CrossEncoder(
-            model_name=RERANKER_MODEL_NAME,
-            device=device,
-            trust_remote_code=True
-        )
+        # print("Loading Reranker Model...")
+        # self.reranker = CrossEncoder(
+        #     model_name=RERANKER_MODEL_NAME,
+        #     device=device,
+        #     trust_remote_code=True
+        # )
 
     def check_connection(self) -> bool:
         # Simplified check
@@ -78,34 +78,10 @@ class PhysicsRetriever:
     
     def rerank(self, query: str, initial_results: List[Any], top_k: int = 6) -> List[Any]:
         """
-        Stage 2: Cross-Encoder Reranking
+        Stage 2: Cross-Encoder Reranking (DISABLED)
         """
-        if not initial_results:
-            return []
-            
-        # Prepare pairs for reranking: (query, document_text)
-        pairs = [[query, result.payload['text']] for result in initial_results]
-        
-        # Predict scores
-        scores = self.reranker.predict(pairs)
-        
-        # Combine results with scores
-        for result, score in zip(initial_results, scores):
-            # Add rerank score to payload for debugging/display
-            result.payload['rerank_score'] = float(score)
-            
-        # Sort by rerank score descending
-        # create a list of (score, result) tuples
-        scored_results = sorted(
-            zip(scores, initial_results),
-            key=lambda x: x[0],
-            reverse=True
-        )
-        
-        # Select top K
-        final_results = [result for score, result in scored_results[:top_k]]
-        
-        return final_results
+        # Simply return top K from initial results to save time
+        return initial_results[:top_k]
         
     def search(self, query: str) -> List[Any]:
         """

@@ -72,14 +72,63 @@ if "groq_client" not in st.session_state:
         st.error("GROQ_API_KEY not found in environment variables.")
 
 # System Prompt
-SYSTEM_PROMPT = """You are a Physics Education AI tutor with expertise in classical mechanics. You answer questions using ONLY the provided textbook excerpts.
+# System Prompt
+SYSTEM_PROMPT = """
+You are a Physics Textbook AI Tutor.
 
-**Response Guidelines**:
-1. **Citation Requirement**: Always reference the specific section (e.g., "According to Section 6.1.1") when making claims
-2. **Technical Accuracy**: Use precise physics terminology from the source material
-3. **Pedagogical Tone**: Explain concepts progressively, building on definitions
-4. **Admission of Limits**: If the context doesn't contain the answer, say "The provided sections don't cover [topic]. You may need to refer to Chapter X on [related topic]."
-5. **Equation Formatting**: Present equations clearly, explaining each variable
+Your role is to generate structured, student-friendly explanations STRICTLY using the provided textbook excerpts.
+
+--------------------------------
+CORE RULES
+--------------------------------
+1. You may ONLY use information present in the provided excerpts.
+2. You MAY synthesize and connect ideas across excerpts.
+3. You MUST NOT introduce external knowledge, extra formulas, or assumptions.
+4. If information is missing, clearly state:
+   "The provided textbook excerpts do not contain enough information to answer this completely."
+
+--------------------------------
+ANSWER STRUCTURE RULES
+--------------------------------
+Adapt your response based on the question type:
+
+• If the user asks for a definition:
+  - Provide a concise definition.
+  - Include formula if given in text.
+  - Do NOT include unnecessary diagrams.
+
+• If the user asks to explain:
+  - Use structured sections:
+      1. Definition
+      2. Conceptual Meaning
+      3. Mathematical Expression (if present)
+      4. Physical Significance
+  - Only reference figures if they directly help understanding.
+
+• If derivation or mathematical explanation is requested:
+  - Present step-by-step equations exactly as given in the text.
+  - Do not invent intermediate steps not present in excerpts.
+
+--------------------------------
+FIGURE RULES
+--------------------------------
+If a figure is explicitly useful for understanding:
+- Refer to it exactly as written in the excerpt (e.g., "Fig. 6.7").
+- Do NOT describe images that are not mentioned in the context.
+- Do NOT force image references.
+
+--------------------------------
+STYLE REQUIREMENTS
+--------------------------------
+• Use headings and subheadings.
+• Use LaTeX formatting for equations.
+• Be clear, structured, and pedagogical.
+• Avoid robotic repetition of chunk text.
+• Make explanations readable and engaging for students.
+
+Always begin with:
+"Based on [Location]..."
+
 """
 
 def get_relevant_images(image_refs, image_folder="extract_images"):
@@ -107,6 +156,49 @@ def get_relevant_images(image_refs, image_folder="extract_images"):
                 found_images.append(os.path.join(image_folder, f))
                 
     return sorted(list(set(found_images)))
+
+def inject_images_in_text(response_text, image_paths):
+    """
+     intelligently injects markdown images into the response text 
+    where figure references (e.g., "Fig. 6.7") are detected.
+    """
+    for path in image_paths:
+        # Expected filenames: fig_6_7.png -> 6.7
+        base_name = os.path.basename(path)
+        name_no_ext = os.path.splitext(base_name)[0]
+        
+        # Create variations to match LLM output
+        # e.g., fig_6_7 -> fig. 6.7, Fig. 6.7, Figure 6.7
+        parts = name_no_ext.split('_')
+        if len(parts) >= 2 and parts[0].lower().startswith('fig'):
+            # Construct "6.7" from parts[1:]
+            number_part = ".".join(parts[1:]) 
+            
+            # Patterns to look for in text
+            patterns = [
+                f"Fig. {number_part}", 
+                f"Figure {number_part}",
+                f"Fig {number_part}",
+                f"Figure {number_part}"
+            ]
+            
+            image_markdown = f"\n\n![{base_name}]({path})\n\n"
+            
+            injected = False
+            for pattern in patterns:
+                if pattern in response_text:
+                    # Replace the FIRST occurrence to inject image
+                    # We use a placeholder to avoid infinite replacements if we just replaced 'pattern'
+                    response_text = response_text.replace(pattern, f"{pattern}\n{image_markdown}", 1)
+                    injected = True
+                    break
+            
+            # Fallback: if not found but highly relevant (in unique_images), 
+            # we might want to append it? 
+            # Current instruction: "Inject image when figure tag detected"
+            # So if not detected, we DON'T inject.
+            
+    return response_text
 
 def format_contexts(chunks):
     formatted = []
@@ -187,8 +279,21 @@ with st.sidebar:
                 # Get shared client
                 client = get_qdrant_client()
 
+                # Define callbacks
+                def update_status(msg):
+                    status_text.text(msg)
+                
+                def update_progress(val):
+                    if isinstance(val, (int, float)) and 0 <= val <= 100:
+                        progress_bar.progress(int(val))
+
                 # Execute pipeline using shared client
-                run_dir, json_path, images_dir = run_pdf_pipeline(temp_pdf_path, client=client)
+                run_dir, json_path, images_dir = run_pdf_pipeline(
+                    temp_pdf_path, 
+                    client=client,
+                    status_callback=update_status,
+                    progress_callback=update_progress
+                )
                 
                 progress_bar.progress(80)
                 status_text.text("Cleaning up resources...")
@@ -257,13 +362,12 @@ with chat_container:
                     with st.expander("🔍 Debug: View Context passed to LLM"):
                         st.code(msg["context"])
 
-                # Show images if available
-                if msg.get("images"):
-                    st.markdown("### 🖼️ Relevant Diagrams")
-                    cols = st.columns(min(len(msg["images"]), 3))
-                    for idx, img_path in enumerate(msg["images"]):
-                        with cols[idx % 3]:
-                            st.image(img_path, caption=os.path.basename(img_path), use_container_width=True)
+                # Show raw context if available
+                if msg.get("context"):
+                    with st.expander("� Debug: View Context passed to LLM"):
+                        st.code(msg["context"])
+
+                # Images are now injected into the text, so no need to show them separately here.
 
 # Chat Input
 if prompt := st.chat_input("Ask a question about the chapter..."):
@@ -300,9 +404,30 @@ if prompt := st.chat_input("Ask a question about the chapter..."):
         
         # Generation phase
         with st.spinner("✍️ Generating answer..."):
+            
+            # Adaptive Depth Instruction
+            question_type_instruction = """
+            Classify the question internally as one of:
+            - Definition
+            - Conceptual Explanation
+            - Mathematical Derivation
+            - Example Problem
+
+            Then structure the answer accordingly.
+            """
+
             messages = [
                 {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": f"**Question**: {prompt}\n\n**Relevant Textbook Excerpts**:\n{context_str}\n\n**Your Answer**:"}
+                {"role": "user", "content": f"""
+{question_type_instruction}
+
+**Question**: {prompt}
+
+**Relevant Textbook Excerpts**:
+{context_str}
+
+**Your Answer**:
+"""}
             ]
             
             try:
@@ -319,10 +444,7 @@ if prompt := st.chat_input("Ask a question about the chapter..."):
                         full_response += chunk.choices[0].delta.content
                         message_placeholder.markdown(full_response + "▌")
                 
-                # Display final response
-                message_placeholder.markdown(full_response)
-                t4 = time.time()
-                generation_time = t4 - t3
+                # Display final response (Processed)
                 
                 # Manual Token Estimation (Fallback)
                 # Approximation: 1 token ~= 4 chars (english)
@@ -346,27 +468,33 @@ if prompt := st.chat_input("Ask a question about the chapter..."):
                     st.caption(f"Total Turnaround: {generation_time + context_time + rerank_time + retrieval_time:.2f}s")
                 
                 # Extract and store sources
+                # 1. Extract and store sources including image_paths
                 sources = [
                     {
                         'section_number': c.payload['metadata']['section_number'],
                         'subsection_number': c.payload['metadata'].get('subsection_number'),
                         'section_title': c.payload['metadata']['section_title'],
                         'text': c.payload['text'],
-                        'image_refs': c.payload['metadata'].get('image_refs', [])
+                        'image_paths': c.payload['metadata'].get('image_paths', []) # Use paths
                     }
                     for c in reranked_results
                 ]
                 
-                # Fetch images from sources
-                all_image_refs = []
+                # 2. Fetch images directly from metadata paths
+                unique_images = []
                 for s in sources:
-                    all_image_refs.extend(s['image_refs'])
+                    for path in s.get('image_paths', []):
+                        if os.path.exists(path):
+                            unique_images.append(path)
                 
-                unique_images = get_relevant_images(all_image_refs)
-                
+                unique_images = sorted(list(set(unique_images)))
+
+                # 3. Inject Images into Text
+                final_response_text = inject_images_in_text(full_response, unique_images)
+
                 # Display sources and other info
                 with message_placeholder.container():
-                    st.markdown(full_response)
+                    st.markdown(final_response_text) # Show INJECTED response
                     
                     if sources:
                         with st.expander("📖 View Sources (Retrieved Chunks)"):
@@ -385,17 +513,12 @@ if prompt := st.chat_input("Ask a question about the chapter..."):
                     with st.expander("🔍 Debug: View Context passed to LLM"):
                         st.code(context_str)
 
-                    if unique_images:
-                        st.markdown("### 🖼️ Relevant Diagrams")
-                        cols = st.columns(min(len(unique_images), 3))
-                        for idx, img_path in enumerate(unique_images):
-                            with cols[idx % 3]:
-                                st.image(img_path, caption=os.path.basename(img_path), use_container_width=True)
+                    # Removed "Relevant Diagrams" section (images now inline)
                 
                 # Save interaction with sources and images
                 st.session_state.messages.append({
                     "role": "assistant",
-                    "content": full_response,
+                    "content": final_response_text,
                     "sources": sources,
                     "images": unique_images,
                     "context": context_str
