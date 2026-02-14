@@ -73,6 +73,13 @@ if "groq_client" not in st.session_state:
     else:
         st.error("GROQ_API_KEY not found in environment variables.")
 
+# Initialize chapter management session state
+if "selected_chapters" not in st.session_state:
+    st.session_state.selected_chapters = []
+
+if "available_chapters" not in st.session_state:
+    st.session_state.available_chapters = []
+
 # System Prompt
 # System Prompt
 SYSTEM_PROMPT = """
@@ -329,8 +336,11 @@ with st.sidebar:
                 status_text.text("Ingestion Complete. Reloading Retriever...")
                 progress_bar.progress(100)
                 
-                # 4. Refresh retriever
+                # 4. Refresh retriever and chapter cache
                 st.session_state.retriever = get_retriever()
+                # Clear chapter cache to show newly ingested chapter
+                if "available_chapters" in st.session_state:
+                    del st.session_state.available_chapters
                 st.success(f"✅ Processing Complete! Images saved to {images_dir}")
                 
             except Exception as e:
@@ -339,7 +349,78 @@ with st.sidebar:
                 if "retriever" not in st.session_state:
                      st.session_state.retriever = get_retriever()
 
-    # 3. Retrieval Settings
+    # 3. Knowledge Base Control
+    st.subheader("📚 Knowledge Base Control")
+    
+    client = get_qdrant_client()
+    
+    # Fetch all chapters from collection (cached in session state)
+    if not st.session_state.available_chapters:
+        chapters = set()
+        
+        try:
+            scroll_result = client.scroll(
+                collection_name="physics_textbook",
+                limit=1000,
+                with_payload=True
+            )
+        
+            for point in scroll_result[0]:
+                cid = point.payload.get("metadata", {}).get("chapter_id")
+                if cid:
+                    chapters.add(cid)
+        
+        except:
+            pass
+        
+        st.session_state.available_chapters = sorted(list(chapters))
+    
+    chapters = st.session_state.available_chapters
+    
+    if chapters:
+        selected_chapters = st.multiselect(
+            "Select Chapters to Search",
+            options=chapters,
+            default=chapters,
+            help="Filter search results to selected chapters only"
+        )
+        
+        # Store in session state for use in retrieval
+        st.session_state.selected_chapters = selected_chapters if selected_chapters else chapters
+        
+        # Delete functionality
+        st.markdown("---")
+        st.markdown("**🗑️ Delete Chapters**")
+        
+        if selected_chapters:
+            if st.button("Delete Selected Chapters", type="secondary"):
+                from qdrant_client.models import Filter, FieldCondition, MatchValue
+                
+                delete_filter = Filter(
+                    should=[
+                        FieldCondition(
+                            key="metadata.chapter_id",
+                            match=MatchValue(value=cid)
+                        )
+                        for cid in selected_chapters
+                    ]
+                )
+                
+                client.delete(
+                    collection_name="physics_textbook",
+                    points_selector=delete_filter
+                )
+                
+                st.success(f"✅ Deleted: {', '.join(selected_chapters)}")
+                st.rerun()
+        else:
+            st.warning("⚠️ No chapters selected - searches will return no results")
+            st.info("Select chapters above to enable deletion")
+    else:
+        st.info("No chapters found in database")
+        st.session_state.selected_chapters = []
+
+    # 4. Retrieval Settings
     st.subheader("🔍 Retrieval Settings")
     top_k = st.slider("Initial Retrieval (K)", 10, 50, 20)
     final_chunks = st.slider("Final Context Chunks", 3, 15, 6)
@@ -407,8 +488,13 @@ if prompt := st.chat_input("Ask a question about the chapter..."):
         # Retrieval phase
         with st.spinner("🔍 Searching textbook..."):
             t0 = time.time()
-            # Initial retrieval
-            results = st.session_state.retriever.retrieve(prompt, top_k=top_k)
+            # Initial retrieval with chapter filter
+            chapter_filter = st.session_state.get('selected_chapters', None)
+            results = st.session_state.retriever.retrieve(
+                prompt, 
+                top_k=top_k,
+                chapter_filter=chapter_filter
+            )
             t1 = time.time()
             retrieval_time = t1 - t0
             

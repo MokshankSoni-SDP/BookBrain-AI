@@ -1,5 +1,6 @@
 import json
 import re
+import uuid
 import os
 import time
 from typing import List, Dict, Any
@@ -10,6 +11,7 @@ from langchain_experimental.text_splitter import SemanticChunker
 from langchain_huggingface import HuggingFaceEmbeddings
 from qdrant_client import QdrantClient
 from qdrant_client.models import VectorParams, Distance, PointStruct
+from qdrant_client.http.models import Filter, FieldCondition, MatchValue
 import torch
 
 # Load environment variables
@@ -39,6 +41,8 @@ def load_and_process_data(file_input: Any) -> List[Dict[str, Any]]:
     
     for i, chapter in enumerate(chapters):
         chapter_title = chapter.get("chapter_title", "Unknown Chapter")
+        chapter_id = chapter_title.lower().replace(" ", "_")
+
         sections = chapter.get("sections", [])
         print(f"[DEBUG] Chapter {i+1}: '{chapter_title}' has {len(sections)} sections.")
         
@@ -53,6 +57,7 @@ def load_and_process_data(file_input: Any) -> List[Dict[str, Any]]:
                     processed_items.append({
                         "text": content_text,
                         "metadata": {
+                            "chapter_id": chapter_id, 
                             "chapter_title": chapter_title,
                             "section_number": section_number,
                             "section_title": section_title,
@@ -77,6 +82,7 @@ def load_and_process_data(file_input: Any) -> List[Dict[str, Any]]:
                         processed_items.append({
                             "text": full_text,
                             "metadata": {
+                                "chapter_id": chapter_id, 
                                 "chapter_title": chapter_title,
                                 "section_number": section_number,
                                 "section_title": section_title,
@@ -211,13 +217,12 @@ def ingest_data(file_input: Any, progress_callback=None, status_callback=None, c
     # Re-create collection
     collections = client.get_collections().collections
     collection_names = [c.name for c in collections]
-    if COLLECTION_NAME in collection_names:
-        client.delete_collection(COLLECTION_NAME)
-        
-    client.create_collection(
-        collection_name=COLLECTION_NAME,
-        vectors_config=VectorParams(size=768, distance=Distance.COSINE) # Nomic-embed-text-v1.5 is 768d
-    )
+
+    if COLLECTION_NAME not in collection_names:
+        client.create_collection(
+            collection_name=COLLECTION_NAME,
+            vectors_config=VectorParams(size=768, distance=Distance.COSINE)
+        )
     
     # Upload points
     log("Generating embeddings and uploading to Qdrant...")
@@ -238,7 +243,7 @@ def ingest_data(file_input: Any, progress_callback=None, status_callback=None, c
         
         current_points = []
         for j, (doc, vector) in enumerate(zip(batch_docs, embeddings_list)):
-            point_id = i + j
+            point_id = str(uuid.uuid4())
             current_points.append(PointStruct(
                 id=point_id,
                 vector=vector,
@@ -261,6 +266,19 @@ def ingest_data(file_input: Any, progress_callback=None, status_callback=None, c
             
     # Client is managed externally or left open for persistent connection
     log("Ingestion complete! Qdrant client kept open.")
+
+def delete_chapter(client, chapter_id):
+    client.delete(
+        collection_name="physics_textbook",
+        points_selector=Filter(
+            must=[
+                FieldCondition(
+                    key="metadata.chapter_id",
+                    match=MatchValue(value=chapter_id)
+                )
+            ]
+        )
+    )
 
 if __name__ == "__main__":
     if os.path.exists("chapter_structure.json"):

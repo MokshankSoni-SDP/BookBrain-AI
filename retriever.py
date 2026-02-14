@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from langchain_huggingface import HuggingFaceEmbeddings
 from qdrant_client import QdrantClient
 from sentence_transformers import CrossEncoder
+from qdrant_client.models import Filter, FieldCondition, MatchValue
 import torch
 
 # Load environment variables
@@ -60,22 +61,48 @@ class PhysicsRetriever:
         except Exception:
             return {'vectors_count': 0, 'status': 'unknown'}
 
-    def retrieve(self, query: str, top_k: int = 20) -> List[Any]:
+    def retrieve(self, query: str, top_k: int = 20, chapter_filter: str = None) -> List[Any]:
         """
         Stage 1: Dense Retrieval from Qdrant
         """
-        # Removed explicit connection/collection check to avoid race conditions
         query_vector = self.embeddings.embed_query(query)
-        
+
+        query_filter = None
+        if chapter_filter and chapter_filter != ["All Chapters"]:
+            if isinstance(chapter_filter, list):
+                query_filter = Filter(
+                    should=[
+                        FieldCondition(
+                            key="metadata.chapter_id",
+                            match=MatchValue(value=cid)
+                        )
+                        for cid in chapter_filter
+                    ]
+                )
+            else:
+                query_filter = Filter(
+                    must=[
+                        FieldCondition(
+                            key="metadata.chapter_id",
+                            match=MatchValue(value=chapter_filter)
+                        )
+                    ]
+                )    
+
+        # Handle empty list - no chapters selected means return nothing
+        if isinstance(chapter_filter, list) and len(chapter_filter) == 0:
+            return []
+
         search_results = self.client.search(
             collection_name=COLLECTION_NAME,
             query_vector=query_vector,
+            query_filter=query_filter,
             limit=top_k,
-            score_threshold=0.4 # Minimum relevance threshold
+            score_threshold=0.4
         )
-        
+
         return search_results
-    
+
     def rerank(self, query: str, initial_results: List[Any], top_k: int = 6) -> List[Any]:
         """
         Stage 2: Cross-Encoder Reranking (DISABLED)
@@ -83,13 +110,11 @@ class PhysicsRetriever:
         # Simply return top K from initial results to save time
         return initial_results[:top_k]
         
-    def search(self, query: str) -> List[Any]:
-        """
-        Full pipeline: Retrieve -> Rerank
-        """
-        initial_results = self.retrieve(query)
+    def search(self, query: str, chapter_filter: str = None) -> List[Any]:
+        initial_results = self.retrieve(query, chapter_filter=chapter_filter)
         final_results = self.rerank(query, initial_results)
         return final_results
+
 
     
     def close(self):
