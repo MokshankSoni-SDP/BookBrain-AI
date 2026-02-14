@@ -3,6 +3,8 @@ import os
 import time
 from dotenv import load_dotenv
 from groq import Groq
+import re
+import base64
 
 from qdrant_client import QdrantClient
 
@@ -74,62 +76,94 @@ if "groq_client" not in st.session_state:
 # System Prompt
 # System Prompt
 SYSTEM_PROMPT = """
-You are a Physics Textbook AI Tutor.
+You are a High-Level Physics Professor. Your goal is to weave the provided textbook excerpts into a seamless, conversational, and pedagogical lesson for a student.
 
-Your role is to generate structured, student-friendly explanations STRICTLY using the provided textbook excerpts.
+---------------------------------------------------------
+1. THE GOLDEN RULE: STRICT GROUNDING
+---------------------------------------------------------
+- Your ONLY source of truth is the 'Textbook Excerpts'. You must answer STRICTLY using the provided textbook excerpts.You are not allowed to use prior knowledge.
+- If a user asks about a specific entity (e.g., 'Example 6.3' or 'Problem 5') and that EXACT term is not mentioned in the excerpts, you MUST NOT answer using general knowledge. 
+- In such cases, your entire response must be: "The provided textbook excerpts do not contain the specific content for [Entity Name]. Please provide the text or verify the section."
 
---------------------------------
-CORE RULES
---------------------------------
-1. You may ONLY use information present in the provided excerpts.
-2. You MAY synthesize and connect ideas across excerpts.
-3. You MUST NOT introduce external knowledge, extra formulas, or assumptions.
-4. If information is missing, clearly state:
-   "The provided textbook excerpts do not contain enough information to answer this completely."
+→ Do NOT guess the topic.
+→ Do NOT generalize.
+→ Do NOT assume based on section theme.
 
---------------------------------
-ANSWER STRUCTURE RULES
---------------------------------
-Adapt your response based on the question type:
+---------------------------------------------------------
+2. MATHEMATICAL PRECISION (LaTeX)
+---------------------------------------------------------
+- Use LaTeX for ALL mathematical symbols, variables, and equations.
+- INLINE: Use single dollar signs. Example: $v = r \omega$ or $\tau = r \times F$.
+- STANDALONE: Use double dollar signs for primary equations. 
+  Example: $$\frac{dL}{dt} = \tau_{ext}$$
+- Never use plain text for variables (use $x$ instead of x).
 
-• If the user asks for a definition:
-  - Provide a concise definition.
-  - Include formula if given in text.
-  - Do NOT include unnecessary diagrams.
+---------------------------------------------------------
+3. NARRATIVE STRUCTURE (NO "STEP 1, STEP 2")
+---------------------------------------------------------
+- Provide a continuous, flowing explanation using Markdown headings (###) for themes.
+- Start with a direct answer or definition.
+- Transition naturally: "To understand this conceptually..." -> "Mathematically, this is expressed as..." -> "The physical significance of this is..."
+- Use bold text for key physics terms upon their first mention.
 
-• If the user asks to explain:
-  - Use structured sections:
-      1. Definition
-      2. Conceptual Meaning
-      3. Mathematical Expression (if present)
-      4. Physical Significance
-  - Only reference figures if they directly help understanding.
+-------------------------------------------------------
+4. EQUATION FORMATTING RULES
+-------------------------------------------------------
 
-• If derivation or mathematical explanation is requested:
-  - Present step-by-step equations exactly as given in the text.
-  - Do not invent intermediate steps not present in excerpts.
+• All equations MUST use proper LaTeX.
+• Inline math must use $...$.
+• Display equations must use $$...$$.
+• Do NOT escape backslashes incorrectly.
+• Do NOT mix text inside math blocks.
 
---------------------------------
-FIGURE RULES
---------------------------------
-If a figure is explicitly useful for understanding:
-- Refer to it exactly as written in the excerpt (e.g., "Fig. 6.7").
-- Do NOT describe images that are not mentioned in the context.
-- Do NOT force image references.
+Ensure all mathematical expressions are formatted using proper LaTeX.
 
---------------------------------
-STYLE REQUIREMENTS
---------------------------------
-• Use headings and subheadings.
-• Use LaTeX formatting for equations.
-• Be clear, structured, and pedagogical.
-• Avoid robotic repetition of chunk text.
-• Make explanations readable and engaging for students.
+---------------------------------------------------------
+5. FIGURE INTEGRATION
+---------------------------------------------------------
+- If content recieved has mentioned any kind of figure , you need to try displaying it with the content
+- You MUST explicitly refer to figures mentioned in the text (e.g., "Fig. 6.7") when explaining a related concept.
+- Format: Always use the exact string 'Fig. X.Y' (e.g., Fig. 6.12). 
+- Your mention of 'Fig. X.Y' acts as a trigger for the system to display the diagram. Do not describe an image if the text doesn't mention a Figure ID.
 
-Always begin with:
-"Based on [Location]..."
+---------------------------------------------------------
+6. RESPONSE START
+---------------------------------------------------------
+Always begin your response with:
+"**Source Reference**: [Location]" (Use the specific Section or Subsection title provided in the metadata).
 
 """
+
+def normalize_latex(text):
+    """
+    Makes LaTeX rendering robust:
+    1. Converts [ ... ] math blocks into $$ ... $$
+    2. Fixes escaped backslashes
+    3. Ensures display equations render correctly
+    """
+
+    # Fix double-escaped backslashes
+    text = text.replace("\\\\", "\\")
+
+    text = re.sub(r"\\\[(.*?)\\\]", r"\n\n$$\1$$\n\n", text, flags=re.DOTALL)
+
+    # Convert bracketed LaTeX blocks to display math
+    def replace_brackets(match):
+        content = match.group(1)
+        if "\\" in content or "^" in content or "_" in content:
+            return f"\n\n$$\n{content}\n$$\n\n"
+        return match.group(0)
+
+    text = re.sub(r"\[\s*(.*?)\s*\]", replace_brackets, text, flags=re.DOTALL)
+
+    text = re.sub(
+        r"\n\$(.*?)=(.*?)\$\n",
+        r"\n\n$$\1=\2$$\n\n",
+        text
+    )
+
+    return text
+
 
 def get_relevant_images(image_refs, image_folder="extract_images"):
     """
@@ -158,47 +192,32 @@ def get_relevant_images(image_refs, image_folder="extract_images"):
     return sorted(list(set(found_images)))
 
 def inject_images_in_text(response_text, image_paths):
-    """
-     intelligently injects markdown images into the response text 
-    where figure references (e.g., "Fig. 6.7") are detected.
-    """
     for path in image_paths:
-        # Expected filenames: fig_6_7.png -> 6.7
-        base_name = os.path.basename(path)
-        name_no_ext = os.path.splitext(base_name)[0]
-        
-        # Create variations to match LLM output
-        # e.g., fig_6_7 -> fig. 6.7, Fig. 6.7, Figure 6.7
-        parts = name_no_ext.split('_')
-        if len(parts) >= 2 and parts[0].lower().startswith('fig'):
-            # Construct "6.7" from parts[1:]
-            number_part = ".".join(parts[1:]) 
-            
-            # Patterns to look for in text
-            patterns = [
-                f"Fig. {number_part}", 
-                f"Figure {number_part}",
-                f"Fig {number_part}",
-                f"Figure {number_part}"
-            ]
-            
-            image_markdown = f"\n\n![{base_name}]({path})\n\n"
-            
-            injected = False
-            for pattern in patterns:
-                if pattern in response_text:
-                    # Replace the FIRST occurrence to inject image
-                    # We use a placeholder to avoid infinite replacements if we just replaced 'pattern'
-                    response_text = response_text.replace(pattern, f"{pattern}\n{image_markdown}", 1)
-                    injected = True
-                    break
-            
-            # Fallback: if not found but highly relevant (in unique_images), 
-            # we might want to append it? 
-            # Current instruction: "Inject image when figure tag detected"
-            # So if not detected, we DON'T inject.
-            
+        filename = os.path.basename(path)
+        figure_number = filename.replace("fig_", "").replace(".png", "").replace("_", ".")
+        fig_label = f"Fig. {figure_number}"
+
+        if fig_label in response_text:
+            placeholder = f"\n\n[[IMAGE::{path}]]\n\n"
+            response_text = response_text.replace(fig_label, fig_label + placeholder, 1)
+
     return response_text
+
+def render_response(text):
+    parts = re.split(r"\[\[IMAGE::(.*?)\]\]", text)
+
+    for i, part in enumerate(parts):
+        if i % 2 == 0:
+            # Normal text
+            st.markdown(part)
+        else:
+            # Image path
+            if os.path.exists(part):
+                col1, col2, col3 = st.columns([1, 2, 1])
+                with col2:
+                    st.image(part, width=350)
+                    fig_name = os.path.basename(part).replace("fig_", "Fig. ").replace(".png", "").replace("_", ".")
+                    st.caption(fig_name)
 
 def format_contexts(chunks):
     formatted = []
@@ -404,7 +423,7 @@ if prompt := st.chat_input("Ask a question about the chapter..."):
         
         # Generation phase
         with st.spinner("✍️ Generating answer..."):
-            
+            t_gen_start = time.time()
             # Adaptive Depth Instruction
             question_type_instruction = """
             Classify the question internally as one of:
@@ -435,15 +454,18 @@ if prompt := st.chat_input("Ask a question about the chapter..."):
                     model="llama-3.3-70b-versatile",
                     messages=messages,
                     stream=True,
-                    temperature=0.3,
-                    max_tokens=1024
+                    temperature=0.3
                 )
                 
                 for chunk in stream:
                     if chunk.choices and chunk.choices[0].delta.content:
                         full_response += chunk.choices[0].delta.content
-                        message_placeholder.markdown(full_response + "▌")
+                        message_placeholder.write(full_response + "▌")
+
+                message_placeholder.markdown(full_response)
                 
+                generation_time = time.time() - t_gen_start
+
                 # Display final response (Processed)
                 
                 # Manual Token Estimation (Fallback)
@@ -462,10 +484,9 @@ if prompt := st.chat_input("Ask a question about the chapter..."):
                 with st.expander("⏱️ Performance Metrics", expanded=False):
                     col1, col2, col3, col4 = st.columns(4)
                     col1.metric("Retrieval (Qdrant)", f"{retrieval_time:.2f}s")
-                    col2.metric("Reranking", f"{rerank_time:.2f}s")
+                    #col2.metric("Reranking", f"{rerank_time:.2f}s")
                     col3.metric("Context Prep", f"{context_time:.2f}s")
                     col4.metric("LLM Generation", f"{generation_time:.2f}s")
-                    st.caption(f"Total Turnaround: {generation_time + context_time + rerank_time + retrieval_time:.2f}s")
                 
                 # Extract and store sources
                 # 1. Extract and store sources including image_paths
@@ -489,13 +510,18 @@ if prompt := st.chat_input("Ask a question about the chapter..."):
                 
                 unique_images = sorted(list(set(unique_images)))
 
-                # 3. Inject Images into Text
+                full_response = normalize_latex(full_response)
+
+                
+                # 4. Inject Images into Text
                 final_response_text = inject_images_in_text(full_response, unique_images)
 
                 # Display sources and other info
                 with message_placeholder.container():
-                    st.markdown(final_response_text) # Show INJECTED response
-                    
+                    # st.markdown(final_response_text,unsafe_allow_html=False) # Show INJECTED response
+                    render_response(final_response_text)
+
+
                     if sources:
                         with st.expander("📖 View Sources (Retrieved Chunks)"):
                              for i, source in enumerate(sources, 1):
