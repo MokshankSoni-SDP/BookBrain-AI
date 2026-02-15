@@ -34,6 +34,26 @@ COLLECTION_NAME = "physics_textbook"
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print(f"Using device: {device}")
 
+def split_structural_blocks(text: str) -> List[str]:
+    """
+    Split text into structural blocks based on textbook patterns.
+    """
+    # Patterns for structural boundaries
+    patterns = [
+        r"(?=^Example\s+\d+(?:\.\d+)?)", # Non-capturing group
+        r"(?=^Summary)",
+        r"(?=^Points to Ponder)",
+        r"(?=^Exercises)",
+        r"(?=^\d+\.\d+\s+[A-Z])",  # subsection like 6.1.1 Title
+    ]
+
+    combined_pattern = "|".join(patterns)
+
+    blocks = re.split(combined_pattern, text, flags=re.MULTILINE)
+
+    # Clean empty blocks
+    return [b.strip() for b in blocks if b and b.strip()]
+
 def load_and_process_data(file_input: Any) -> List[Dict[str, Any]]:
     if isinstance(file_input, str):
         with open(file_input, 'r', encoding='utf-8') as f:
@@ -61,20 +81,25 @@ def load_and_process_data(file_input: Any) -> List[Dict[str, Any]]:
             # Process main section content
             if section.get("content"):
                 content_text = "\n\n".join(section["content"])
-                if content_text.strip():
-                    processed_items.append({
-                        "text": content_text,
-                        "metadata": {
-                            "chapter_id": chapter_id, 
-                            "chapter_title": chapter_title,
-                            "section_number": section_number,
-                            "section_title": section_title,
-                            "subsection_number": None,
-                            "subsection_title": None,
-                            "hierarchy_level": "section",
-                            "has_equations": False # Placeholder
-                        }
-                    })
+                
+                # NEW: Structural splitting
+                blocks = split_structural_blocks(content_text)
+                
+                for block in blocks:
+                    if block.strip():
+                        processed_items.append({
+                            "text": block,
+                            "metadata": {
+                                "chapter_id": chapter_id, 
+                                "chapter_title": chapter_title,
+                                "section_number": section_number,
+                                "section_title": section_title,
+                                "subsection_number": None,
+                                "subsection_title": None,
+                                "hierarchy_level": "section",
+                                "has_equations": False # Placeholder
+                            }
+                        })
             
             # Process subsections
             for subsection in section.get("subsections", []):
@@ -83,23 +108,28 @@ def load_and_process_data(file_input: Any) -> List[Dict[str, Any]]:
                 
                 if subsection.get("content"):
                     content_text = "\n\n".join(subsection["content"])
-                    # Context injection
-                    full_text = f"Section {section_number}: {section_title}\n\n{content_text}"
                     
-                    if content_text.strip():
-                        processed_items.append({
-                            "text": full_text,
-                            "metadata": {
-                                "chapter_id": chapter_id, 
-                                "chapter_title": chapter_title,
-                                "section_number": section_number,
-                                "section_title": section_title,
-                                "subsection_number": subsection_number,
-                                "subsection_title": subsection_title,
-                                "hierarchy_level": "subsection",
-                                "has_equations": False # Placeholder
-                            }
-                        })
+                    # NEW: Structural splitting
+                    blocks = split_structural_blocks(content_text)
+                    
+                    for block in blocks:
+                        # Context injection
+                        full_text = f"Section {section_number}: {section_title}\n\n{block}"
+                        
+                        if block.strip():
+                            processed_items.append({
+                                "text": full_text,
+                                "metadata": {
+                                    "chapter_id": chapter_id, 
+                                    "chapter_title": chapter_title,
+                                    "section_number": section_number,
+                                    "section_title": section_title,
+                                    "subsection_number": subsection_number,
+                                    "subsection_title": subsection_title,
+                                    "hierarchy_level": "subsection",
+                                    "has_equations": False # Placeholder
+                                }
+                            })
                     
     return processed_items
 
@@ -136,8 +166,8 @@ def ingest_data(file_input: Any, progress_callback=None, status_callback=None, c
     chunker = SemanticChunker(
         embeddings=embeddings,
         breakpoint_threshold_type="percentile",
-        breakpoint_threshold_amount=95,
-        min_chunk_size=100
+        breakpoint_threshold_amount=90,  # slightly more splits
+        min_chunk_size=300
     )
     
     # Load Data
@@ -160,7 +190,20 @@ def ingest_data(file_input: Any, progress_callback=None, status_callback=None, c
     total_raw = len(raw_items)
     
     for idx, item in enumerate(raw_items):
-        chunks = chunker.create_documents([item["text"]])
+        initial_chunks = chunker.create_documents([item["text"]])
+        
+        # Hard word cap to prevent oversized chunks
+        chunks = []
+        for c in initial_chunks:
+            words = c.page_content.split()
+            if len(words) > 900:
+                # Hard split oversized chunks
+                for i in range(0, len(words), 800):
+                    sub_text = " ".join(words[i:i+800])
+                    chunks.append(Document(page_content=sub_text, metadata=c.metadata))
+            else:
+                chunks.append(c)
+        
         for i, chunk in enumerate(chunks):
             # NEW: Track both references and full paths
             image_refs = []
@@ -179,6 +222,9 @@ def ingest_data(file_input: Any, progress_callback=None, status_callback=None, c
 
             # Clean content for LLM
             clean_content = image_pattern.sub("[Figure]", chunk.page_content)
+            
+            # Remove repeated figure captions
+            clean_content = re.sub(r"Fig\.\s*\d+\.\d+.*", "", clean_content)
 
             # Enrich metadata
             chunk_metadata = item["metadata"].copy()
