@@ -30,6 +30,12 @@ load_custom_css()
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+if "selected_chapters" not in st.session_state:
+    st.session_state.selected_chapters = []
+
+if "available_chapters" not in st.session_state:
+    st.session_state.available_chapters = None
+
 @st.cache_resource(show_spinner=False)
 def get_qdrant_client():
     try:
@@ -73,12 +79,6 @@ if "groq_client" not in st.session_state:
     else:
         st.error("GROQ_API_KEY not found in environment variables.")
 
-# Initialize chapter management session state
-if "selected_chapters" not in st.session_state:
-    st.session_state.selected_chapters = []
-
-if "available_chapters" not in st.session_state:
-    st.session_state.available_chapters = []
 
 # System Prompt
 # System Prompt
@@ -340,7 +340,7 @@ with st.sidebar:
                 st.session_state.retriever = get_retriever()
                 # Clear chapter cache to show newly ingested chapter
                 if "available_chapters" in st.session_state:
-                    del st.session_state.available_chapters
+                    st.session_state.available_chapters = None
                 st.success(f"✅ Processing Complete! Images saved to {images_dir}")
                 
             except Exception as e:
@@ -354,29 +354,57 @@ with st.sidebar:
     
     client = get_qdrant_client()
     
-    # Fetch all chapters from collection (cached in session state)
-    if not st.session_state.available_chapters:
+    # # Fetch all chapters from collection (cached in session state)
+    # if st.session_state.available_chapters is None:
+    #     chapters = set()
+        
+    #     try:
+    #         scroll_result = client.scroll(
+    #             collection_name="physics_textbook",
+    #             limit=1000,
+    #             with_payload=True
+    #         )
+        
+    #         for point in scroll_result[0]:
+    #             cid = point.payload.get("metadata", {}).get("chapter_id")
+    #             if cid:
+    #                 chapters.add(cid)
+        
+    #     except:
+    #         pass
+        
+    #     st.session_state.available_chapters = sorted(list(chapters))
+    
+    # chapters = st.session_state.available_chapters
+
+    if st.session_state.available_chapters is None:
         chapters = set()
-        
+        offset = None
+
         try:
-            scroll_result = client.scroll(
-                collection_name="physics_textbook",
-                limit=1000,
-                with_payload=True
-            )
-        
-            for point in scroll_result[0]:
-                cid = point.payload.get("metadata", {}).get("chapter_id")
-                if cid:
-                    chapters.add(cid)
-        
-        except:
-            pass
-        
+            while True:
+                points, offset = client.scroll(
+                    collection_name="physics_textbook",
+                    limit=1000,
+                    offset=offset,
+                    with_payload=True
+                )
+
+                for point in points:
+                    cid = point.payload.get("metadata", {}).get("chapter_id")
+                    if cid:
+                        chapters.add(cid)
+
+                if offset is None:
+                    break
+
+        except Exception as e:
+            print("Chapter discovery error:", e)
+
         st.session_state.available_chapters = sorted(list(chapters))
-    
+
     chapters = st.session_state.available_chapters
-    
+
     if chapters:
         selected_chapters = st.multiselect(
             "Select Chapters to Search",

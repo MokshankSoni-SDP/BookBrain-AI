@@ -26,8 +26,6 @@ def get_diagram_bbox(page, caption_block, split_x):
         
     diagram_box = drawings[0]
     for d_rect in drawings[1:]:
-        if abs(d_rect.y1 - diagram_box.y0) > 40:
-            break
         diagram_box |= d_rect
         
     return diagram_box + (-5, -5, 5, 5)
