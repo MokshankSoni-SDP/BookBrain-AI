@@ -2,9 +2,9 @@ import os
 from typing import List, Dict, Any
 from dotenv import load_dotenv
 from langchain_huggingface import HuggingFaceEmbeddings
-from qdrant_client import QdrantClient
+from qdrant_client import QdrantClient, models
+from qdrant_client.models import SparseVector, Filter, FieldCondition, MatchValue
 from sentence_transformers import CrossEncoder
-from qdrant_client.models import Filter, FieldCondition, MatchValue
 import torch
 
 # Load environment variables
@@ -47,6 +47,34 @@ class PhysicsRetriever:
         #     trust_remote_code=True
         # )
 
+    def build_sparse_query(self, text: str) -> SparseVector:
+        """
+        Build a simple sparse vector from query text.
+        Uses hash-based indexing for query-time efficiency.
+        """
+        tokens = text.lower().split()
+        token_counts = {}
+        
+        # Count token frequencies
+        for token in tokens:
+            token_counts[token] = token_counts.get(token, 0) + 1
+        
+        # Build sparse vector using hash-based indices
+        indices = []
+        values = []
+        
+        for token, count in token_counts.items():
+            # Use hash for index (modulo to keep reasonable range)
+            idx = abs(hash(token)) % 100000
+            indices.append(idx)
+            values.append(float(count))
+        
+        return SparseVector(
+            indices=indices,
+            values=values
+        )
+
+
     def check_connection(self) -> bool:
         # Simplified check
         return self.client is not None
@@ -63,13 +91,22 @@ class PhysicsRetriever:
 
     def retrieve(self, query: str, top_k: int = 20, chapter_filter: str = None) -> List[Any]:
         """
-        Stage 1: Dense Retrieval from Qdrant
+        Hybrid retrieval using query_points API with RRF fusion
+        Combines dense semantic search + sparse BM25 keyword search
         """
+        # Generate dense embedding
         query_vector = self.embeddings.embed_query(query)
+        
+        # Generate sparse vector
+        sparse_query = self.build_sparse_query(query)
 
+        # Build filter
         query_filter = None
         if chapter_filter and chapter_filter != ["All Chapters"]:
             if isinstance(chapter_filter, list):
+                # Handle empty list - no chapters selected means return nothing
+                if len(chapter_filter) == 0:
+                    return []
                 query_filter = Filter(
                     should=[
                         FieldCondition(
@@ -87,21 +124,34 @@ class PhysicsRetriever:
                             match=MatchValue(value=chapter_filter)
                         )
                     ]
-                )    
-
-        # Handle empty list - no chapters selected means return nothing
-        if isinstance(chapter_filter, list) and len(chapter_filter) == 0:
-            return []
-
-        search_results = self.client.search(
+                )
+        
+        # Hybrid search with RRF fusion
+        response = self.client.query_points(
             collection_name=COLLECTION_NAME,
-            query_vector=query_vector,
-            query_filter=query_filter,
+            prefetch=[
+                # Dense vector search
+                models.Prefetch(
+                    query=query_vector,
+                    using="dense",
+                    limit=top_k
+                ),
+                # Sparse vector search
+                models.Prefetch(
+                    query=sparse_query,
+                    using="bm25",
+                    limit=top_k
+                )
+            ],
+            query=models.FusionQuery(fusion=models.Fusion.RRF),
             limit=top_k,
-            score_threshold=0.4
+            query_filter=query_filter,
+            with_payload=True,
+            score_threshold=0.3
         )
-
-        return search_results
+        
+        # query_points returns QueryResponse, extract points
+        return response.points
 
     def rerank(self, query: str, initial_results: List[Any], top_k: int = 6) -> List[Any]:
         """

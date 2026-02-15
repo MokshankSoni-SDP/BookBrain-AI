@@ -3,14 +3,22 @@ import re
 import uuid
 import os
 import time
+import numpy as np
 from typing import List, Dict, Any
 from dotenv import load_dotenv
 from langchain_community.document_loaders import JSONLoader
 from langchain_core.documents import Document
 from langchain_experimental.text_splitter import SemanticChunker
 from langchain_huggingface import HuggingFaceEmbeddings
-from qdrant_client import QdrantClient
-from qdrant_client.models import VectorParams, Distance, PointStruct
+from qdrant_client import QdrantClient, models
+from qdrant_client.models import (
+    VectorParams, 
+    Distance, 
+    PointStruct,
+    SparseVectorParams,
+    SparseIndexParams,
+    SparseVector
+)
 from qdrant_client.http.models import Filter, FieldCondition, MatchValue
 import torch
 
@@ -190,6 +198,49 @@ def ingest_data(file_input: Any, progress_callback=None, status_callback=None, c
             
     log(f"Generated {len(documents)} semantic chunks.")
 
+    # ------------------------------
+    # Build BM25 Sparse Vectors
+    # ------------------------------
+    log("Building BM25 sparse vectors...")
+    
+    # Tokenize all documents
+    corpus = [doc.page_content.lower().split() for doc in documents]
+    
+    # Build vocabulary mapping
+    vocab = {}
+    vocab_index = 0
+    
+    for tokens in corpus:
+        for token in set(tokens):
+            if token not in vocab:
+                vocab[token] = vocab_index
+                vocab_index += 1
+    
+    log(f"Built vocabulary with {len(vocab)} unique tokens")
+    
+    # Function to build sparse vector for a document
+    def build_sparse_vector(text: str) -> SparseVector:
+        tokens = text.lower().split()
+        token_counts = {}
+        
+        # Count token frequencies
+        for token in tokens:
+            if token in vocab:
+                token_counts[token] = token_counts.get(token, 0) + 1
+        
+        # Build sparse vector
+        indices = []
+        values = []
+        
+        for token, count in token_counts.items():
+            indices.append(vocab[token])
+            values.append(float(count))
+        
+        return SparseVector(
+            indices=indices,
+            values=values
+        )
+
     if not documents:
         log("[WARNING] No chunks generated. Aborting ingestion to preserve existing data.")
         return
@@ -221,8 +272,19 @@ def ingest_data(file_input: Any, progress_callback=None, status_callback=None, c
     if COLLECTION_NAME not in collection_names:
         client.create_collection(
             collection_name=COLLECTION_NAME,
-            vectors_config=VectorParams(size=768, distance=Distance.COSINE)
+            vectors_config={
+                "dense": VectorParams(size=768, distance=Distance.COSINE)
+            },
+            sparse_vectors_config={
+                "bm25": models.SparseVectorParams(
+                    index=models.SparseIndexParams(
+                        on_disk=False  # Keep in memory for faster search
+                    )
+                )
+            }
         )
+
+
     
     # Upload points
     log("Generating embeddings and uploading to Qdrant...")
@@ -244,14 +306,22 @@ def ingest_data(file_input: Any, progress_callback=None, status_callback=None, c
         current_points = []
         for j, (doc, vector) in enumerate(zip(batch_docs, embeddings_list)):
             point_id = str(uuid.uuid4())
+            
+            # Generate sparse vector for this document
+            sparse_vec = build_sparse_vector(doc.page_content)
+            
             current_points.append(PointStruct(
                 id=point_id,
-                vector=vector,
+                vector={
+                    "dense": vector,      # Dense embedding vector
+                    "bm25": sparse_vec    # Sparse BM25 vector
+                },
                 payload={
                     "text": doc.page_content,
                     "metadata": doc.metadata
                 }
             ))
+
         
         client.upsert(
             collection_name=COLLECTION_NAME,
