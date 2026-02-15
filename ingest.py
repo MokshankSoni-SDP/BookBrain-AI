@@ -54,16 +54,219 @@ def split_structural_blocks(text: str) -> List[str]:
     # Clean empty blocks
     return [b.strip() for b in blocks if b and b.strip()]
 
+def clean_text_noise(text: str) -> str:
+    """
+    Clean text by removing noise like page headers, footers, and page numbers.
+    """
+    lines = text.split('\n')
+    cleaned_lines = []
+    
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            continue
+            
+        # Rule 0: Specific artifacts to always remove (exact or partial matches)
+        if "Summary Points to Ponder Exercises" in stripped:
+            continue
+            
+        # Rule 1: Page headers/footers (mostly uppercase and short)
+        # Heuristic: > 50% uppercase letters and length < 60
+        upper_count = sum(1 for c in stripped if c.isupper())
+        total_len = len(stripped)
+        
+        if total_len > 0:
+            upper_ratio = upper_count / total_len
+            
+            # Strong signal: Short and mostly uppercase
+            if total_len < 60 and upper_ratio > 0.5:
+                # Check for specific noise keywords
+                if any(x in stripped for x in ["CHAPTER", "Summary", "Points to Ponder", "Exercises", "PHYSICS", "SYSTEMS OF"]):
+                    continue
+                # If very short and uppercase, assume garbage
+                if total_len < 30:
+                    continue
+                    
+        # Rule 2: Page numbers (digits only)
+        if stripped.isdigit():
+            continue
+            
+        # Rule 3: Specific patterns (Page X PHYSICS)
+        # Matches "94 PHYSICS", "PHYSICS 95", "CHAPTER 6"
+        if "PHYSICS" in stripped and total_len < 20:
+             continue
+        if "CHAPTER" in stripped and total_len < 20: 
+             continue
+
+        cleaned_lines.append(line)
+        
+    return "\n".join(cleaned_lines)
+
+def normalize_text_for_structure(text: str) -> str:
+    """
+    Normalize text before structural splitting.
+    """
+    # 1. Remove bullet markers before Example (e.g. "u Example")
+    text = re.sub(r"(?:^|\n)\s*[uU]\s+Example", "\nExample", text)
+    
+    # 2. Flatten "Example \n 6.1" to "Example 6.1"
+    text = re.sub(r"Example\s+(\d+(\.\d+)?)", r"Example \1", text)
+
+    # 3. Remove bullet markers before Answer (e.g. "u Answer") or standalone "u"
+    text = re.sub(r"(?:^|\n)\s*[uU]\s+Answer", "\nAnswer", text)
+    text = re.sub(r"(?:^|\n)\s*[uU]\s*(\n|$)", r"\n", text)
+
+    # 4. Ensure Example always starts on a new line (helps regex detection)
+    text = re.sub(r"\s+(Example\s+\d+(\.\d+)?)", r"\n\n\1", text)
+    
+    # Deduplicate newlines
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    
+    return text
+
+def split_structural_blocks(text: str) -> List[str]:
+    """
+    Split text into structural blocks based on textbook patterns.
+    """
+    # Step 1: Normalize
+    text = normalize_text_for_structure(text)
+    
+    # Step 2: Flexible Regex Patterns with Anchors
+    patterns = [
+        r"(?=^\s*Example\s+\d+(?:\.\d+)?)",
+        r"(?=^\s*Summary)",
+        r"(?=^\s*Points to Ponder)",
+        r"(?=^\s*Exercises)",
+        r"(?=^\s*\d+\.\d+\s+[A-Z])",  # subsection like 6.1.1 Title
+    ]
+
+    combined_pattern = "|".join(patterns)
+
+    # Use re.split
+    blocks = re.split(combined_pattern, text, flags=re.MULTILINE)
+
+    # Clean empty blocks
+    cleaned_blocks = [b.strip() for b in blocks if b and b.strip()]
+    
+    # Step 3: Merge Example + Answer
+    return merge_example_answer_blocks(cleaned_blocks)
+
+def merge_example_answer_blocks(blocks: List[str]) -> List[str]:
+    """
+    Merges 'Example X.Y' blocks with their subsequent 'Answer' blocks.
+    """
+    merged = []
+    i = 0
+    while i < len(blocks):
+        block = blocks[i]
+        block_stripped = block.strip()
+        
+        # Check if this block is an Example
+        if block_stripped.startswith("Example"):
+            combined = block
+            
+            # Look ahead for Answer
+            if i + 1 < len(blocks):
+                next_block = blocks[i+1]
+                if next_block.strip().startswith("Answer"):
+                    combined += "\n\n" + next_block
+                    i += 1 # Skip next block
+            
+            merged.append(combined)
+        else:
+            merged.append(block)
+        i += 1
+    
+    return merged
+
+def remove_duplicate_lines(text: str) -> str:
+    """
+    Remove duplicate lines (e.g. repeated figure captions) while preserving order.
+    """
+    seen = set()
+    lines = []
+    for line in text.split("\n"):
+        line_stripped = line.strip()
+        if not line_stripped:
+            lines.append(line)
+            continue
+            
+        if line_stripped not in seen:
+            lines.append(line)
+            seen.add(line_stripped)
+            
+    return "\n".join(lines)
+
+def aggregate_blocks(blocks: List[str], max_words: int = 1000, soft_limit: int = 700) -> List[str]:
+    """
+    Aggregate blocks intelligently based on size constraints.
+    Uses a soft limit to prefer splitting at paragraph boundaries.
+    """
+    chunks = []
+    current_chunk = []
+    current_words = 0
+    
+    def flush_chunk():
+        nonlocal current_chunk, current_words
+        if current_chunk:
+            # Join and Deduplicate content within the chunk
+            raw_text = "\n\n".join(current_chunk)
+            clean_text = remove_duplicate_lines(raw_text)
+            chunks.append(clean_text)
+            current_chunk = []
+            current_words = 0
+
+    for block in blocks:
+        # PURE ISOLATION RULE: If block is an Example, flush immediately before AND after
+        if block.strip().startswith("Example"):
+            flush_chunk() # Flush whatever was before
+            
+            # Verify if Example itself is huge (unlikely to be > 1000 words)
+            chunks.append(remove_duplicate_lines(block)) 
+            continue
+
+        # Split block into atomic paragraphs
+        paragraphs = block.split('\n\n')
+        
+        for para in paragraphs:
+            para = para.strip()
+            if not para:
+                continue
+                
+            para_words = len(para.split())
+            
+            # Check if paragraph itself is too huge
+            if para_words > max_words:
+                flush_chunk()
+                chunks.append(para) 
+                continue
+                
+            # Check if adding this paragraph exceeds limits
+            if current_words + para_words > soft_limit:
+                flush_chunk()
+                current_chunk.append(para)
+                current_words += para_words
+            else:
+                current_chunk.append(para)
+                current_words += para_words
+            
+            # Additional safeguard
+            if current_words > max_words:
+                flush_chunk()
+    
+    if current_chunk:
+        flush_chunk()
+    
+    return chunks
+
 def load_and_process_data(file_input: Any) -> List[Dict[str, Any]]:
     if isinstance(file_input, str):
         with open(file_input, 'r', encoding='utf-8') as f:
             data = json.load(f)
     else:
-        # Assume file-like object (e.g. UploadedFile)
         data = json.load(file_input)
     
     processed_items = []
-    # If the root is a list, iterate; if dict (single chapter), wrap in list
     chapters = data if isinstance(data, list) else [data]
     print(f"[DEBUG] ingest.py: Loaded JSON. Found {len(chapters)} chapter objects.")
     
@@ -74,32 +277,30 @@ def load_and_process_data(file_input: Any) -> List[Dict[str, Any]]:
         sections = chapter.get("sections", [])
         print(f"[DEBUG] Chapter {i+1}: '{chapter_title}' has {len(sections)} sections.")
         
-        for section in chapter.get("sections", []):
+        for section in sections:
             section_number = section.get("section_number") or section.get("id", "")
             section_title = section.get("section_title") or section.get("title", "")
             
             # Process main section content
             if section.get("content"):
-                content_text = "\n\n".join(section["content"])
+                # Clean content but DO NOT split here. Return full section text.
+                cleaned_content = [clean_text_noise(c) for c in section["content"]]
+                content_text = "\n\n".join(cleaned_content)
                 
-                # NEW: Structural splitting
-                blocks = split_structural_blocks(content_text)
-                
-                for block in blocks:
-                    if block.strip():
-                        processed_items.append({
-                            "text": block,
-                            "metadata": {
-                                "chapter_id": chapter_id, 
-                                "chapter_title": chapter_title,
-                                "section_number": section_number,
-                                "section_title": section_title,
-                                "subsection_number": None,
-                                "subsection_title": None,
-                                "hierarchy_level": "section",
-                                "has_equations": False # Placeholder
-                            }
-                        })
+                if content_text.strip():
+                    processed_items.append({
+                        "text": content_text,
+                        "metadata": {
+                            "chapter_id": chapter_id, 
+                            "chapter_title": chapter_title,
+                            "section_number": section_number,
+                            "section_title": section_title,
+                            "subsection_number": None,
+                            "subsection_title": None,
+                            "hierarchy_level": "section",
+                            "has_equations": False
+                        }
+                    })
             
             # Process subsections
             for subsection in section.get("subsections", []):
@@ -107,29 +308,26 @@ def load_and_process_data(file_input: Any) -> List[Dict[str, Any]]:
                 subsection_title = subsection.get("subsection_title") or subsection.get("title", "")
                 
                 if subsection.get("content"):
-                    content_text = "\n\n".join(subsection["content"])
+                    cleaned_content = [clean_text_noise(c) for c in subsection["content"]]
+                    content_text = "\n\n".join(cleaned_content)
                     
-                    # NEW: Structural splitting
-                    blocks = split_structural_blocks(content_text)
+                    # Add context to text
+                    full_text = f"Section {section_number}: {section_title}\n\n{content_text}"
                     
-                    for block in blocks:
-                        # Context injection
-                        full_text = f"Section {section_number}: {section_title}\n\n{block}"
-                        
-                        if block.strip():
-                            processed_items.append({
-                                "text": full_text,
-                                "metadata": {
-                                    "chapter_id": chapter_id, 
-                                    "chapter_title": chapter_title,
-                                    "section_number": section_number,
-                                    "section_title": section_title,
-                                    "subsection_number": subsection_number,
-                                    "subsection_title": subsection_title,
-                                    "hierarchy_level": "subsection",
-                                    "has_equations": False # Placeholder
-                                }
-                            })
+                    if content_text.strip():
+                        processed_items.append({
+                            "text": full_text,
+                            "metadata": {
+                                "chapter_id": chapter_id, 
+                                "chapter_title": chapter_title,
+                                "section_number": section_number,
+                                "section_title": section_title,
+                                "subsection_number": subsection_number,
+                                "subsection_title": subsection_title,
+                                "hierarchy_level": "subsection",
+                                "has_equations": False
+                            }
+                        })
                     
     return processed_items
 
@@ -161,14 +359,8 @@ def ingest_data(file_input: Any, progress_callback=None, status_callback=None, c
         model_kwargs={'device': device, 'trust_remote_code': True}
     )
     
-    # Initialize Semantic Chunker
-    log("Initializing Semantic Chunker...")
-    chunker = SemanticChunker(
-        embeddings=embeddings,
-        breakpoint_threshold_type="percentile",
-        breakpoint_threshold_amount=90,  # slightly more splits
-        min_chunk_size=300
-    )
+    # Removed SemanticChunker - using content-driven aggregation
+    log("Using content-driven aggregation (no semantic chunking)")
     
     # Load Data
     log("Loading data...")
@@ -190,25 +382,22 @@ def ingest_data(file_input: Any, progress_callback=None, status_callback=None, c
     total_raw = len(raw_items)
     
     for idx, item in enumerate(raw_items):
-        initial_chunks = chunker.create_documents([item["text"]])
+        # Content-driven aggregation (no semantic chunking)
+        log(f"Aggregating item {idx+1}/{len(raw_items)}...")
         
-        # Hard word cap to prevent oversized chunks
-        chunks = []
-        for c in initial_chunks:
-            words = c.page_content.split()
-            if len(words) > 900:
-                # Hard split oversized chunks
-                for i in range(0, len(words), 800):
-                    sub_text = " ".join(words[i:i+800])
-                    chunks.append(Document(page_content=sub_text, metadata=c.metadata))
-            else:
-                chunks.append(c)
+        # Split into structural blocks first
+        blocks = split_structural_blocks(item["text"])
         
-        for i, chunk in enumerate(chunks):
+        # Aggregate blocks with size constraints  
+        aggregated_chunks = aggregate_blocks(blocks, max_words=900)
+        
+        log(f"Generated {len(aggregated_chunks)} chunks from {len(blocks)} blocks")
+        
+        for i, chunk_text in enumerate(aggregated_chunks):
             # NEW: Track both references and full paths
             image_refs = []
             image_paths = [] 
-            matches = image_pattern.findall(chunk.page_content)
+            matches = image_pattern.findall(chunk_text)
             
             for match in matches:
                 # Normalize path separators
@@ -221,16 +410,13 @@ def ingest_data(file_input: Any, progress_callback=None, status_callback=None, c
                 print(f"   -> Found Image Path: {clean_path}")
 
             # Clean content for LLM
-            clean_content = image_pattern.sub("[Figure]", chunk.page_content)
-            
-            # Remove repeated figure captions
-            clean_content = re.sub(r"Fig\.\s*\d+\.\d+.*", "", clean_content)
+            clean_content = chunk_text
 
             # Enrich metadata
             chunk_metadata = item["metadata"].copy()
             chunk_metadata["chunk_index"] = i
             chunk_metadata["estimated_tokens"] = len(clean_content) // 4
-            chunk_metadata["has_equations"] = "$" in chunk.page_content or "\\" in chunk.page_content
+            chunk_metadata["has_equations"] = "$" in chunk_text or "\\" in chunk_text
             
             # STORE BOTH: refs for logic, paths for display
             chunk_metadata["image_refs"] = list(set(image_refs))
@@ -319,7 +505,7 @@ def ingest_data(file_input: Any, progress_callback=None, status_callback=None, c
         client.create_collection(
             collection_name=COLLECTION_NAME,
             vectors_config={
-                "dense": VectorParams(size=768, distance=Distance.COSINE)
+                "dense": VectorParams(size=384, distance=Distance.COSINE)
             },
             sparse_vectors_config={
                 "bm25": models.SparseVectorParams(
@@ -397,10 +583,19 @@ def delete_chapter(client, chapter_id):
     )
 
 if __name__ == "__main__":
-    if os.path.exists("chapter_structure.json"):
+    import sys
+    if len(sys.argv) > 1:
+        file_path = sys.argv[1]
+        if os.path.exists(file_path):
+            print(f"Ingesting from command line argument: {file_path}")
+            ingest_data(file_path)
+        else:
+            print(f"Error: File not found: {file_path}")
+    elif os.path.exists("chapter_structure.json"):
         ingest_data("chapter_structure.json")
     elif os.path.exists("physics_structure.json"):
         print("Found physics_structure.json, ingesting...")
         ingest_data("physics_structure.json")
     else:
         print("No suitable JSON file found (checked chapter_structure.json, physics_structure.json).")
+        print("Usage: python ingest.py [path_to_structure.json]")
