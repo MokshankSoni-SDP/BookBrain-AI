@@ -6,12 +6,17 @@ from ingest import ingest_data
 from step3_classify_blocks import classify_and_clean
 from step4_to_json import build_hierarchy, save_structure
 
-def run_pdf_pipeline(pdf_path, output_dir="./processed_data", client=None, status_callback=None, progress_callback=None):
+print("PIPELINE LOADED")
+
+def run_pdf_pipeline(pdf_path, output_dir="./processed_data", client=None, status_callback=None, progress_callback=None, extraction_mode="colwise"):
     """
     Runs the full pipeline:
-    1. Extract blocks & images (step 3)
+    1. Extract blocks & images (step 3) OR use Normal V2 extraction
     2. Build JSON hierarchy (step 4)
     3. Ingest into Qdrant
+    
+    Args:
+        extraction_mode (str): "colwise" (default) or "normal"
     """
     
     # Create unique output directory for this run to avoid collisions
@@ -24,18 +29,35 @@ def run_pdf_pipeline(pdf_path, output_dir="./processed_data", client=None, statu
     os.makedirs(images_dir, exist_ok=True)
     
     print(f"[Pipeline] Starting processing for {pdf_path}")
+    print(f"[Pipeline] Mode: {extraction_mode}")
     print(f"[Pipeline] Output directory: {run_dir}")
 
-    # Step 1 & 2: Classify blocks and extract images
-    if status_callback: status_callback("Classifying blocks and extracting images...")
-    print("[Pipeline] Classifying blocks and extracting images...")
-    # classify_and_clean now accepts pdf_path and image_output_dir
-    classified_items = classify_and_clean(pdf_path=pdf_path, image_output_dir=images_dir)
-    
-    # Step 3: Build JSON
-    print("[Pipeline] Building hierarchy...")
-    hierarchy = build_hierarchy(classified_items)
-    save_structure(hierarchy, json_path)
+    if extraction_mode == "normal":
+        # --- NORMAL V2 EXTRACTION ---
+        if status_callback: status_callback("Running Normal Text Extraction (V2)...")
+        print("[Pipeline] Running Normal Text Extraction (V2)...")
+        
+        from extract_v2_test import process_pdf_v2
+        
+        # This function returns the dictionary structure directly
+        hierarchy = process_pdf_v2(pdf_path, image_output_dir=images_dir)
+        
+        # Save manually to the run directory
+        save_structure(hierarchy, json_path)
+        
+    else:
+        # --- COLWISE EXTRACTION (Default) ---
+        # Step 1 & 2: Classify blocks and extract images
+        if status_callback: status_callback("Classifying blocks and extracting images (Colwise)...")
+        print("[Pipeline] Classifying blocks and extracting images (Colwise)...")
+        
+        # classify_and_clean now accepts pdf_path and image_output_dir
+        classified_items = classify_and_clean(pdf_path=pdf_path, image_output_dir=images_dir)
+        
+        # Step 3: Build JSON
+        print("[Pipeline] Building hierarchy...")
+        hierarchy = build_hierarchy(classified_items)
+        save_structure(hierarchy, json_path)
     
     # Step 4: Ingest
     if status_callback: status_callback("Ingesting into Qdrant...")

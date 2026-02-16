@@ -284,6 +284,14 @@ with st.sidebar:
 
     # 2. Data Ingestion
     st.subheader("📥 Data Ingestion")
+    
+    # Ingestion Method Selection
+    ingest_mode = st.radio(
+        "Ingestion Method",
+        ["Colwise Text (Default)", "Normal Text"],
+        help="Choose 'Colwise' for multi-column textbooks. Choose 'Normal' for standard single-column PDFs."
+    )
+    
     uploaded_file = st.file_uploader(
         "Upload Textbook Chapter (PDF)",
         type=['pdf'],
@@ -311,6 +319,9 @@ with st.sidebar:
                 import torch
                 import gc
                 
+                # Map UI selection to pipeline arg
+                mode_arg = "colwise" if "Colwise" in ingest_mode else "normal"
+                
                 # Get shared client
                 client = get_qdrant_client()
 
@@ -327,7 +338,8 @@ with st.sidebar:
                     temp_pdf_path, 
                     client=client,
                     status_callback=update_status,
-                    progress_callback=update_progress
+                    progress_callback=update_progress,
+                    extraction_mode=mode_arg
                 )
                 
                 progress_bar.progress(80)
