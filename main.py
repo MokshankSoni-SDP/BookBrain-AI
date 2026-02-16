@@ -11,6 +11,7 @@ from qdrant_client import QdrantClient
 from retriever import PhysicsRetriever
 from ingest import ingest_data
 from ui.styles import load_custom_css
+from config import get_qdrant_client
 
 # Load env declaration
 load_dotenv()
@@ -37,11 +38,10 @@ if "available_chapters" not in st.session_state:
     st.session_state.available_chapters = None
 
 @st.cache_resource(show_spinner=False)
-def get_qdrant_client():
+def get_cached_qdrant_client():
     try:
-        path = "./qdrant_data"
-        print(f"[DEBUG] Initializing QdrantClient with path: {os.path.abspath(path)}")
-        client = QdrantClient(path=path)
+        print(f"[DEBUG] Initializing QdrantClient...")
+        client = get_qdrant_client()
         print(f"[DEBUG] QdrantClient initialized successfully. Collections: {client.get_collections()}")
         return client
     except Exception as e:
@@ -50,7 +50,7 @@ def get_qdrant_client():
 
 @st.cache_resource(show_spinner=False)
 def get_retriever():
-    client = get_qdrant_client()
+    client = get_cached_qdrant_client()
     return PhysicsRetriever(client)
 
 # Initialize resources
@@ -323,7 +323,7 @@ with st.sidebar:
                 mode_arg = "colwise" if "Colwise" in ingest_mode else "normal"
                 
                 # Get shared client
-                client = get_qdrant_client()
+                client = get_cached_qdrant_client()
 
                 # Define callbacks
                 def update_status(msg):
@@ -373,7 +373,7 @@ with st.sidebar:
     # 3. Knowledge Base Control
     st.subheader("📚 Knowledge Base Control")
     
-    client = get_qdrant_client()
+    client = get_cached_qdrant_client()
     
     # # Fetch all chapters from collection (cached in session state)
     # if st.session_state.available_chapters is None:

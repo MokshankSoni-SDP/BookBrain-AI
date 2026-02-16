@@ -1,0 +1,10 @@
+.git
+.gitignore
+.dockerignore
+__pycache__
+venv
+.env
+qdrant_data
+extract_images
+processed_data
+*.lock

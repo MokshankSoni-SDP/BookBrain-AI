@@ -17,3 +17,18 @@ RULES = {
 # Adjusted to ~240pt on a 600pt page to separate the sidebar
 COLUMN_GAP_THRESHOLD = 0.4
 CAPTION_LOOK_AHEAD = 2
+
+# Qdrant Configuration
+import os
+from qdrant_client import QdrantClient
+
+def get_qdrant_client():
+    host = os.getenv("QDRANT_HOST")
+    port = os.getenv("QDRANT_PORT")
+    api_key = os.getenv("QDRANT_API_KEY")
+
+    if host and port:
+        return QdrantClient(host=host, port=int(port), api_key=api_key)
+    else:
+        # Default to local path (ensure directory exists)
+        return QdrantClient(path="./qdrant_data")
