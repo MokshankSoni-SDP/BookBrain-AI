@@ -230,18 +230,27 @@ def format_contexts(chunks):
     formatted = []
     for i, chunk in enumerate(chunks, 1):
         meta = chunk.payload['metadata']
-        location = f"Section {meta['section_number']}"
-        if meta.get('subsection_number'):
-            location += f".{meta['subsection_number']}"
-            
+        
+        # Determine Header based on structural metadata
+        header_label = ""
+        if meta.get("example_number"):
+            header_label = f"[Primary Example {meta['example_number']}]"
+        elif meta.get("section_number"):
+            header_label = f"[Section {meta['section_number']}]"
+            if meta.get('subsection_number'):
+                header_label += f".{meta['subsection_number']}"
+        
+        location_title = meta.get('subsection_title') or meta.get('section_title') or "Unknown Section"
+
         # Check for images
         image_note = ""
         if meta.get('image_refs'):
             image_note = "\n[Visual Context: Relevant images/diagrams are available to the user for this section.]"
         
         formatted.append(f"""
---- Context {i} ---
-**Location**: {location} - {meta.get('subsection_title') or meta['section_title']}
+--- Context {i} {header_label} ---
+**Location**: {header_label} - {location_title}
+**Chunk Metadata**: {meta.get('example_number', '')} {meta.get('figure_number', '')}
 **Content**:
 {chunk.payload['text']}{image_note}
 """)

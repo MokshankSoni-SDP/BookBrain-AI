@@ -312,7 +312,7 @@ def load_and_process_data(file_input: Any) -> List[Dict[str, Any]]:
                     content_text = "\n\n".join(cleaned_content)
                     
                     # Add context to text
-                    full_text = f"Section {section_number}: {section_title}\n\n{content_text}"
+                    full_text = f"{content_text}\nSection {section_number}: {section_title}"
                     
                     if content_text.strip():
                         processed_items.append({
@@ -339,18 +339,6 @@ def ingest_data(file_input: Any, progress_callback=None, status_callback=None, c
         print(msg)
         if status_callback:
             status_callback(msg)
-
-    # ... (skipping unchanged parts) ...
-    # We can't skip in replace_file_content unless we match exactly. 
-    # Since I can't match the whole file easily, I will do this in 2 chunks.
-    # Chunk 1: signature
-    # Chunk 2: client init and close removal
-    # Wait, replace_file_content replaces a CONTIGUOUS block.
-    # So I have to replace the WHOLE function or do it in 2 steps.
-    # Doing it in 2 steps is safer for matching.
-    
-    # Actually, let's just do the whole function content since I have it from view_file.
-    # It's about 130 lines.
     
     # Initialize Embedding Model
     log(f"Initializing embedding model: {EMBEDDING_MODEL_NAME} on {device}...")
@@ -414,6 +402,20 @@ def ingest_data(file_input: Any, progress_callback=None, status_callback=None, c
 
             # Enrich metadata
             chunk_metadata = item["metadata"].copy()
+
+            # --------- STRUCTURAL METADATA EXTRACTION ---------
+            # Example extraction
+            normalized_text = re.sub(r"\s+", " ", chunk_text)
+            example_match = re.search(r"\bExample\s+(\d+(?:\.\d+)*)\b", normalized_text, re.IGNORECASE)
+            if example_match:
+                chunk_metadata["example_number"] = example_match.group(1)
+
+            # Figure extraction
+            fig_match = re.search(r"\bFig\.?\s*(\d+(?:\.\d+)*)\b", normalized_text, re.IGNORECASE)
+            if fig_match:
+                chunk_metadata["figure_number"] = fig_match.group(1)
+            # --------------------------------------------------
+
             chunk_metadata["chunk_index"] = i
             chunk_metadata["estimated_tokens"] = len(clean_content) // 4
             chunk_metadata["has_equations"] = "$" in chunk_text or "\\" in chunk_text

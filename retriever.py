@@ -1,4 +1,5 @@
 import os
+import re
 from typing import List, Dict, Any
 from dotenv import load_dotenv
 from langchain_huggingface import HuggingFaceEmbeddings
@@ -47,6 +48,78 @@ class PhysicsRetriever:
         #     trust_remote_code=True
         # )
 
+    # ------------------------------------------------------------------------
+    # STRUCTURAL ANCHOR LOGIC
+    # ------------------------------------------------------------------------
+    def detect_structural_reference(self, query: str):
+        """
+        Detects specific structural references like 'Example 6.8' or 'Fig 6.1'.
+        Returns a tuple (type, value) or None.
+        """
+        query = query.lower()
+
+        # Example detection: "example 6.8", "example 5"
+        example_match = re.search(r"\bexample\s*(\d+(?:\.\d+)*)\b", query, re.IGNORECASE)
+        if example_match:
+            return ("example", example_match.group(1))
+
+        # Figure detection: "fig 6.1", "figure 6.1"
+        figure_match = re.search(r"\bfig\.?\s*(\d+(?:\.\d+)*)\b", query, re.IGNORECASE)
+        if figure_match:
+            return ("figure", figure_match.group(1))
+
+        return None
+
+    def fetch_structural_chunk(self, ref_type: str, ref_value: str, chapter_filter=None):
+        """
+        Directly fetches a specific chunk based on structural metadata.
+        """
+        key_map = {
+            "example": "metadata.example_number",
+            "figure": "metadata.figure_number",
+        }
+
+        if ref_type not in key_map:
+            return []
+
+        # Build filter for structural match
+        must_conditions = [
+            models.FieldCondition(
+                key=key_map[ref_type],
+                match=models.MatchValue(value=ref_value)
+            )
+        ]
+        
+        # Optional: Respect chapter filter if provided (though ID usually unique enough)
+        if chapter_filter and chapter_filter != ["All Chapters"]:
+             if isinstance(chapter_filter, list):
+                if len(chapter_filter) > 0:
+                     must_conditions.append(
+                         models.FieldCondition(
+                             key="metadata.chapter_id",
+                             match=models.MatchAny(any=chapter_filter)
+                         )
+                     )
+             elif isinstance(chapter_filter, str):
+                 must_conditions.append(
+                     models.FieldCondition(
+                         key="metadata.chapter_id",
+                         match=models.MatchValue(value=chapter_filter)
+                     )
+                 )
+
+        filter_condition = models.Filter(must=must_conditions)
+
+        # Use scroll to get the exact chunk
+        response, _ = self.client.scroll(
+            collection_name=COLLECTION_NAME,
+            scroll_filter=filter_condition,
+            limit=3,
+            with_payload=True
+        )
+
+        return response
+
     def build_sparse_query(self, text: str) -> SparseVector:
         """
         Build a simple sparse vector from query text.
@@ -91,9 +164,26 @@ class PhysicsRetriever:
 
     def retrieve(self, query: str, top_k: int = 20, chapter_filter: str = None) -> List[Any]:
         """
-        Hybrid retrieval using query_points API with RRF fusion
-        Combines dense semantic search + sparse BM25 keyword search
+        Hybrid retrieval with Structural Anchor Boosting.
+        1. Detects if query asks for specific Example/Figure (Anchor).
+        2. Fetches Anchor chunk(s).
+        3. Runs standard Hybrid Search (Dense + Sparse).
+        4. Merges results, prioritizing Anchor.
         """
+        
+        # Step 1: Structural Anchor Detection
+        # ---------------------------------------------------------
+        struct_ref = self.detect_structural_reference(query)
+        anchor_chunks = []
+
+        if struct_ref:
+            ref_type, ref_value = struct_ref
+            print(f"[DEBUG] Structural Reference Detected: {ref_type} {ref_value}")
+            anchor_chunks = self.fetch_structural_chunk(ref_type, ref_value, chapter_filter)
+            print(f"[DEBUG] Found {len(anchor_chunks)} anchor chunks.")
+        
+        # Step 2: Standard Hybrid Search
+        # ---------------------------------------------------------
         # Generate dense embedding
         query_vector = self.embeddings.embed_query(query)
         
@@ -150,8 +240,28 @@ class PhysicsRetriever:
             score_threshold=0.3
         )
         
-        # query_points returns QueryResponse, extract points
-        return response.points
+        hybrid_results = response.points
+
+        # Step 3: Merge & Deduplicate
+        # ---------------------------------------------------------
+        final_results = []
+        seen_ids = set()
+
+        # Prioritize Anchor Chunks
+        for r in anchor_chunks:
+            if r.id not in seen_ids:
+                # Tag it as anchor for debugging/UI
+                r.payload["is_anchor"] = True 
+                final_results.append(r)
+                seen_ids.add(r.id)
+        
+        # Append Hybrid Results
+        for r in hybrid_results:
+            if r.id not in seen_ids:
+                final_results.append(r)
+                seen_ids.add(r.id)
+
+        return final_results
 
     def rerank(self, query: str, initial_results: List[Any], top_k: int = 6) -> List[Any]:
         """
