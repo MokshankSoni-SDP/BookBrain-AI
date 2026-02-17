@@ -26,8 +26,6 @@ import torch
 load_dotenv()
 
 # Configuration
-# Configuration
-from config import get_qdrant_client
 QDRANT_PATH = "./qdrant_data" # Local persistent storage
 EMBEDDING_MODEL_NAME = os.getenv("EMBEDDING_MODEL", "nomic-ai/nomic-embed-text-v1.5")
 COLLECTION_NAME = "physics_textbook"
@@ -484,12 +482,12 @@ def ingest_data(file_input: Any, progress_callback=None, status_callback=None, c
     
     # Initialize Qdrant
     if client is None:
-        log(f"[DEBUG] No client provided to ingest_data. Initializing QdrantClient...")
+        log(f"[DEBUG] No client provided to ingest_data. Initializing new QdrantClient at {QDRANT_PATH}...")
         try:
-            client = get_qdrant_client()
-            log(f"[DEBUG] QdrantClient initialized.")
+            client = QdrantClient(path=QDRANT_PATH)
+            log(f"[DEBUG] Local QdrantClient initialized.")
         except Exception as e:
-            log(f"[ERROR] Failed to initialize QdrantClient in ingest_data: {e}")
+            log(f"[ERROR] Failed to initialize local QdrantClient in ingest_data: {e}")
             return
     else:
         log(f"[DEBUG] Using provided Qdrant client in ingest_data: {client}")
