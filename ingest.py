@@ -34,26 +34,6 @@ COLLECTION_NAME = "physics_textbook"
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print(f"Using device: {device}")
 
-def split_structural_blocks(text: str) -> List[str]:
-    """
-    Split text into structural blocks based on textbook patterns.
-    """
-    # Patterns for structural boundaries
-    patterns = [
-        r"(?=^Example\s+\d+(?:\.\d+)?)", # Non-capturing group
-        r"(?=^Summary)",
-        r"(?=^Points to Ponder)",
-        r"(?=^Exercises)",
-        r"(?=^\d+\.\d+\s+[A-Z])",  # subsection like 6.1.1 Title
-    ]
-
-    combined_pattern = "|".join(patterns)
-
-    blocks = re.split(combined_pattern, text, flags=re.MULTILINE)
-
-    # Clean empty blocks
-    return [b.strip() for b in blocks if b and b.strip()]
-
 def clean_text_noise(text: str) -> str:
     """
     Clean text by removing noise like page headers, footers, and page numbers.
@@ -267,7 +247,13 @@ def load_and_process_data(file_input: Any) -> List[Dict[str, Any]]:
         data = json.load(file_input)
     
     processed_items = []
-    chapters = data if isinstance(data, list) else [data]
+    if isinstance(data, dict) and "chapters" in data:
+        chapters = data["chapters"]
+    elif isinstance(data, list):
+        chapters = data
+    else:
+        chapters = [data]
+
     print(f"[DEBUG] ingest.py: Loaded JSON. Found {len(chapters)} chapter objects.")
     
     for i, chapter in enumerate(chapters):
@@ -278,8 +264,8 @@ def load_and_process_data(file_input: Any) -> List[Dict[str, Any]]:
         print(f"[DEBUG] Chapter {i+1}: '{chapter_title}' has {len(sections)} sections.")
         
         for section in sections:
-            section_number = section.get("section_number") or section.get("id", "")
-            section_title = section.get("section_title") or section.get("title", "")
+            section_id = section.get("id", "")
+            section_title = section.get("title", "")
             
             # Process main section content
             if section.get("content"):
@@ -293,26 +279,25 @@ def load_and_process_data(file_input: Any) -> List[Dict[str, Any]]:
                         "metadata": {
                             "chapter_id": chapter_id, 
                             "chapter_title": chapter_title,
-                            "section_number": section_number,
+                            "section_id": section_id,
                             "section_title": section_title,
-                            "subsection_number": None,
+                            "subsection_id": None,
                             "subsection_title": None,
-                            "hierarchy_level": "section",
-                            "has_equations": False
+                            "content_type": "section"
                         }
                     })
             
             # Process subsections
             for subsection in section.get("subsections", []):
-                subsection_number = subsection.get("subsection_number") or subsection.get("id", "")
-                subsection_title = subsection.get("subsection_title") or subsection.get("title", "")
+                subsection_id = subsection.get("id", "")
+                subsection_title = subsection.get("title", "")
                 
                 if subsection.get("content"):
                     cleaned_content = [clean_text_noise(c) for c in subsection["content"]]
                     content_text = "\n\n".join(cleaned_content)
                     
                     # Add context to text
-                    full_text = f"{content_text}\nSection {section_number}: {section_title}"
+                    full_text = f"{content_text}\nSection {section_id}: {section_title}"
                     
                     if content_text.strip():
                         processed_items.append({
@@ -320,14 +305,79 @@ def load_and_process_data(file_input: Any) -> List[Dict[str, Any]]:
                             "metadata": {
                                 "chapter_id": chapter_id, 
                                 "chapter_title": chapter_title,
-                                "section_number": section_number,
+                                "section_id": section_id,
                                 "section_title": section_title,
-                                "subsection_number": subsection_number,
+                                "subsection_id": subsection_id,
                                 "subsection_title": subsection_title,
-                                "hierarchy_level": "subsection",
-                                "has_equations": False
+                                "content_type": "subsection"
                             }
                         })
+
+        # -------------------
+        # Summary (1 chunk)
+        # -------------------
+        if chapter.get("summary") and len(chapter["summary"]) > 0:
+            summary_text = "\n\n".join(
+                [clean_text_noise(s) for s in chapter["summary"]]
+            ).strip()
+
+            if summary_text:
+                processed_items.append({
+                    "text": summary_text,
+                    "metadata": {
+                        "chapter_id": chapter_id,
+                        "chapter_title": chapter_title,
+                        "section_id": None,
+                        "section_title": "summary",
+                        "subsection_id": None,
+                        "subsection_title": None,
+                        "content_type": "summary"
+                    }
+                })
+
+        # -------------------------
+        # Points to Ponder (1 chunk)
+        # -------------------------
+        if chapter.get("points_to_ponder") and len(chapter["points_to_ponder"]) > 0:
+            p2p_text = "\n\n".join(
+                [clean_text_noise(p) for p in chapter["points_to_ponder"]]
+            ).strip()
+
+            if p2p_text:
+                processed_items.append({
+                    "text": p2p_text,
+                    "metadata": {
+                        "chapter_id": chapter_id,
+                        "chapter_title": chapter_title,
+                        "section_id": None,
+                        "section_title": "points_to_ponder",
+                        "subsection_id": None,
+                        "subsection_title": None,
+                        "content_type": "points_to_ponder"
+                    }
+                })
+
+        # -------------------
+        # Exercises (1 chunk)
+        # -------------------
+        if chapter.get("exercises") and len(chapter["exercises"]) > 0:
+            exercise_text = "\n\n".join(
+                [clean_text_noise(e) for e in chapter["exercises"]]
+            ).strip()
+
+            if exercise_text:
+                processed_items.append({
+                    "text": exercise_text,
+                    "metadata": {
+                        "chapter_id": chapter_id,
+                        "chapter_title": chapter_title,
+                        "section_id": None,
+                        "section_title": "exercises",
+                        "subsection_id": None,
+                        "subsection_title": None,
+                        "content_type": "exercises"
+                    }
+                })
                     
     return processed_items
 
@@ -373,13 +423,16 @@ def ingest_data(file_input: Any, progress_callback=None, status_callback=None, c
         # Content-driven aggregation (no semantic chunking)
         log(f"Aggregating item {idx+1}/{len(raw_items)}...")
         
-        # Split into structural blocks first
-        blocks = split_structural_blocks(item["text"])
+        if item["metadata"]["content_type"] in ["summary", "points_to_ponder", "exercises"]:
+            aggregated_chunks = [item["text"]]
+            block_count = 1
+        else:
+            blocks = split_structural_blocks(item["text"])
+            aggregated_chunks = aggregate_blocks(blocks, max_words=900)
+            block_count = len(blocks)
         
-        # Aggregate blocks with size constraints  
-        aggregated_chunks = aggregate_blocks(blocks, max_words=900)
-        
-        log(f"Generated {len(aggregated_chunks)} chunks from {len(blocks)} blocks")
+        log(f"Generated {len(aggregated_chunks)} chunks from {block_count} blocks")
+
         
         for i, chunk_text in enumerate(aggregated_chunks):
             # NEW: Track both references and full paths
@@ -418,7 +471,6 @@ def ingest_data(file_input: Any, progress_callback=None, status_callback=None, c
 
             chunk_metadata["chunk_index"] = i
             chunk_metadata["estimated_tokens"] = len(clean_content) // 4
-            chunk_metadata["has_equations"] = "$" in chunk_text or "\\" in chunk_text
             
             # STORE BOTH: refs for logic, paths for display
             chunk_metadata["image_refs"] = list(set(image_refs))

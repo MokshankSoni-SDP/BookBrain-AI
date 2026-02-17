@@ -39,7 +39,9 @@ def get_diagram_bbox(page, caption_block, split_x):
 def classify_and_clean(pdf_path=None, image_output_dir=None):
 
     target_pdf = pdf_path if pdf_path else config.PDF_PATH
-    target_image_dir = image_output_dir if image_output_dir else config.IMAGE_DIR
+    # target_image_dir = image_output_dir if image_output_dir else config.IMAGE_DIR
+    target_image_dir = os.path.join("processed_data", "knowledge_base", "extracted_images")
+
 
     doc = fitz.open(target_pdf)
     all_items = []
