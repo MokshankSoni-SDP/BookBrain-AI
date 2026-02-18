@@ -10,6 +10,7 @@ RULES = {
     "HEADING_PATTERN": r'^\d+\.\d+(\.\d+)?\s+',
     "FIGURE_PATTERN": r'(?:Fig\.|Figure)\s*(\d+\.\d+)',
     "EQUATION_PATTERN": r'[\(\[](\d+\.\d+)[\)\]]',
+    "CHAPTER_PATTERN_12": r'^Chapter\s+[A-Za-z]+$',
 
     # Added semantic end-of-chapter triggers
     "END_SECTION_KEYWORDS": [

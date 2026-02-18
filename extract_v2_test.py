@@ -2,6 +2,7 @@ import fitz
 import re
 import os
 import json
+import config
 
 def get_12th_diagram_bbox(page, label_rect):
     """
@@ -113,24 +114,126 @@ def test_extraction_12th(pdf_name, output_image_dir):
     return all_items
 
 def build_json_v2(extracted_items):
-    """Organizes items into the hierarchical JSON structure."""
-    structure = {"chapter_title": "Physics Grade 12", "sections": []}
+
+    structure = {
+        "chapters": []
+    }
+
+    current_chapter = None
+    current_chapter_number = None
     curr_section = None
     curr_subsection = None
+    mode = "theory"
 
     for item in extracted_items:
-        val = item["value"]
-        if item["type"] == "HEADING" and re.match(r'^\d+\.\d+\s', val):
-            curr_section = {"section_number": val.split()[0], "section_title": " ".join(val.split()[1:]), "content": [], "subsections": []}
-            structure["sections"].append(curr_section)
-            curr_subsection = None
-        elif item["type"] == "HEADING" and re.match(r'^\d+\.\d+\.\d+', val):
-            curr_subsection = {"subsection_number": val.split()[0], "subsection_title": " ".join(val.split()[1:]), "content": []}
-            if curr_section: curr_section["subsections"].append(curr_subsection)
-        else:
-            target = curr_subsection if curr_subsection else curr_section
-            if target: target["content"].append(val)
+        val = item["value"].strip()
+        upper_val = val.upper()
+
+        # --------------------------------------------------
+        # 1️⃣ CHAPTER DETECTION VIA X.1 INTRODUCTION
+        # --------------------------------------------------
+        chapter_match = re.match(r'^(\d+)\.1\s+', val)
+
+        if item["type"] == "HEADING" and chapter_match:
+
+            chapter_number = chapter_match.group(1)
+
+            # If new chapter number detected
+            if chapter_number != current_chapter_number:
+
+                current_chapter_number = chapter_number
+
+                current_chapter = {
+                    "grade": "12",
+                    "chapter_number": chapter_number,
+                    "chapter_title": f"Chapter {chapter_number}",
+                    "sections": [],
+                    "summary": [],
+                    "points_to_ponder": [],
+                    "exercises": []
+                }
+
+                structure["chapters"].append(current_chapter)
+
+                curr_section = None
+                curr_subsection = None
+                mode = "theory"
+
+        # Skip anything before first chapter
+        if current_chapter is None:
+            continue
+
+        # --------------------------------------------------
+        # 2️⃣ MODE SWITCHING
+        # --------------------------------------------------
+        if upper_val == "SUMMARY":
+            mode = "summary"
+            continue
+
+        if upper_val == "POINTS TO PONDER":
+            mode = "points_to_ponder"
+            continue
+
+        if upper_val == "EXERCISES":
+            mode = "exercises"
+            continue
+
+        # --------------------------------------------------
+        # 3️⃣ SPECIAL SECTIONS
+        # --------------------------------------------------
+        if mode == "summary":
+            current_chapter["summary"].append(val)
+            continue
+
+        if mode == "points_to_ponder":
+            current_chapter["points_to_ponder"].append(val)
+            continue
+
+        if mode == "exercises":
+            current_chapter["exercises"].append(val)
+            continue
+
+        # --------------------------------------------------
+        # 4️⃣ THEORY MODE
+        # --------------------------------------------------
+        if item["type"] == "HEADING":
+
+            # Section (e.g., 2.3 Electric Flux)
+            section_match = re.match(r'^(\d+\.\d+)\s+(.*)', val)
+
+            if section_match:
+                curr_section = {
+                    "section_number": section_match.group(1),
+                    "section_title": section_match.group(2),
+                    "content": [],
+                    "subsections": []
+                }
+                current_chapter["sections"].append(curr_section)
+                curr_subsection = None
+                continue
+
+            # Subsection (e.g., 2.3.1 Something)
+            subsection_match = re.match(r'^(\d+\.\d+\.\d+)\s+(.*)', val)
+
+            if subsection_match:
+                curr_subsection = {
+                    "subsection_number": subsection_match.group(1),
+                    "subsection_title": subsection_match.group(2),
+                    "content": []
+                }
+                if curr_section:
+                    curr_section["subsections"].append(curr_subsection)
+                continue
+
+        # --------------------------------------------------
+        # 5️⃣ CONTENT PLACEMENT
+        # --------------------------------------------------
+        target = curr_subsection if curr_subsection else curr_section
+        if target:
+            target["content"].append(val)
+
     return structure
+
 
 # --- CRITICAL ADDITION: THE BRIDGE FUNCTION ---
 def process_pdf_v2(pdf_path, image_output_dir):

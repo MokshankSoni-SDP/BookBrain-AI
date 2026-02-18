@@ -48,6 +48,12 @@ class PhysicsRetriever:
         #     trust_remote_code=True
         # )
 
+    DEBUG_MODE = False
+
+    def debug_log(message):
+        if DEBUG_MODE:
+            print(message)
+
     # ------------------------------------------------------------------------
     # STRUCTURAL ANCHOR LOGIC
     # ------------------------------------------------------------------------
@@ -262,6 +268,37 @@ class PhysicsRetriever:
                 seen_ids.add(r.id)
 
         return final_results
+
+    def metadata_retrieve(self, filters: Dict[str, Any], limit: int = 50):
+        """
+        Direct metadata-based retrieval using structured filters.
+        """
+        must_conditions = []
+
+        for key, value in filters.items():
+            if value is None:
+                continue
+
+            must_conditions.append(
+                models.FieldCondition(
+                    key=f"metadata.{key}",
+                    match=models.MatchValue(value=value)
+                )
+            )
+
+        if not must_conditions:
+            return []
+
+        query_filter = models.Filter(must=must_conditions)
+
+        results, _ = self.client.scroll(
+            collection_name=COLLECTION_NAME,
+            scroll_filter=query_filter,
+            limit=limit,
+            with_payload=True
+        )
+        print(f"[PLANNER] User prompt: {results}")
+        return results
 
     def rerank(self, query: str, initial_results: List[Any], top_k: int = 6) -> List[Any]:
         """

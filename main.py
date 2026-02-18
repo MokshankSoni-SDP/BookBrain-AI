@@ -1,4 +1,5 @@
 import streamlit as st
+import json
 import os
 import time
 from dotenv import load_dotenv
@@ -79,15 +80,18 @@ if "groq_client" not in st.session_state:
     else:
         st.error("GROQ_API_KEY not found in environment variables.")
 
+DEBUG_MODE = True
+
+def debug_log(message):
+    if DEBUG_MODE:
+        print(message)
 
 # System Prompt
 # System Prompt
 SYSTEM_PROMPT = """
 You are a High-Level Physics Professor. Your goal is to weave the provided textbook excerpts into a seamless, conversational, and pedagogical lesson for a student.
 
----------------------------------------------------------
 1. THE GOLDEN RULE: STRICT GROUNDING
----------------------------------------------------------
 - Your ONLY source of truth is the 'Textbook Excerpts'. You must answer STRICTLY using the provided textbook excerpts.
 - You are not allowed to use prior knowledge.
 - If a user asks about a specific entity (e.g., 'Example 6.3' or 'Problem 5') and that EXACT term is not mentioned in the excerpts, you MUST NOT answer using general knowledge.
@@ -98,9 +102,7 @@ You are a High-Level Physics Professor. Your goal is to weave the provided textb
 → Do NOT generalize.
 → Do NOT assume based on section theme.
 
----------------------------------------------------------
 2. PEDAGOGICAL ADAPTIVITY (CRITICAL)
----------------------------------------------------------
 You must intelligently adapt your explanation style based on the user's question.
 
 A. If the user asks to "derive", "prove", or "show that":
@@ -132,9 +134,7 @@ E. If the question is vague or broad:
 
 Your tone should resemble a real professor adjusting explanation depth to the student’s demand.
 
----------------------------------------------------------
 3. MATHEMATICAL PRECISION (LaTeX)
----------------------------------------------------------
 - Use LaTeX for ALL mathematical symbols, variables, and equations.
 - INLINE: Use single dollar signs. Example: $v = r \omega$.
 - DISPLAY: Use double dollar signs for main equations.
@@ -142,45 +142,34 @@ Your tone should resemble a real professor adjusting explanation depth to the st
 - Do NOT mix text improperly inside math blocks.
 - Ensure all formatting renders cleanly.
 
----------------------------------------------------------
 4. STRUCTURE (FLEXIBLE BUT CLEAN)
----------------------------------------------------------
 - Always use Markdown headings (###) for conceptual sections.
 - DO NOT force fixed headings like:
   "Introduction", "Physical Significance", "Conclusion"
 - Only include sections that are relevant to the user's question.
 - Maintain natural flow instead of template repetition.
 
----------------------------------------------------------
 5. FIGURE INTEGRATION
----------------------------------------------------------
 - If content recieved has mentioned any kind of figure , you need to try displaying it with the content 
 - You MUST explicitly refer to figures mentioned in the text (e.g., "Fig. 6.7") when explaining a related concept. 
 - Format: Always use the exact string 'Fig. X.Y' (e.g., Fig. 6.12). 
 - Your mention of 'Fig. X.Y' acts as a trigger for the system to display the diagram. Do not describe an image if the text doesn't mention a Figure ID.
----------------------------------------------------------
+
 6. RESPONSE START FORMAT
----------------------------------------------------------
 Always begin your response with:
 
 "**Source Reference**: [Exact Section or Subsection Title from Metadata]"
 
----------------------------------------------------------
 7. NO META-COMMENTARY
----------------------------------------------------------
 - Do NOT mention that you are following rules.
 - Do NOT mention the prompt.
 - Do NOT mention retrieved chunks.
 - Only deliver the physics explanation.
 
----------------------------------------------------------
 8. CONSISTENCY SAFETY
----------------------------------------------------------
 If mathematical expressions in the excerpts appear inconsistent, incomplete, or truncated:
 - Present them exactly as provided.
 - Do NOT correct them using external knowledge.
-
----------------------------------------------------------
 
 Your goal is to behave like an expert physics professor who adapts explanation depth intelligently — while remaining strictly grounded in the provided text.
 """
@@ -255,6 +244,24 @@ def inject_images_in_text(response_text, image_paths):
 
     return response_text
 
+CHAPTER_MAPPING = {
+    "1": "U NITS   AND  M EASUREMENT",
+    "2": "M OTION   IN   A  S TRAIGHT  L INE",
+    "3": "M OTION   IN   A  P LANE",
+    "4": "L AWS   OF  M OTION",
+    "5": "W ORK , E NERGY   AND  P OWER",
+    "6": "S YSTEMS   OF  P ARTICLES   AND  R OTATIONAL  M OTION",
+    "7": "G RAVITATION",
+    "8": "M ECHANICAL  P ROPERTIES   OF  S OLIDS",
+    "9": "M ECHANICAL  P ROPERTIES   OF  F LUIDS",
+    "10": "T HERMAL  P ROPERTIES   OF  M ATTER",
+    "11": "T HERMODYNAMICS",
+    "12": "K INETIC  T HEORY",
+    "13": "O SCILLATIONS",
+    "14": "W AVES"
+}
+
+
 def render_response(text):
     parts = re.split(r"\[\[IMAGE::(.*?)\]\]", text)
 
@@ -271,6 +278,204 @@ def render_response(text):
                     fig_name = os.path.basename(part).replace("fig_", "Fig. ").replace(".png", "").replace("_", ".")
                     st.caption(fig_name)
 
+def classify_intent(prompt):
+
+    debug_log("\n================ NEW QUERY =================")
+    debug_log(f"[INTENT] Classifier called for prompt: {prompt}")
+
+    classifier_prompt = f"""
+You are an AI routing controller for a Physics Textbook Retrieval System.
+
+The system supports two retrieval strategies:
+metadata - direct retrieval using indexing on metadata stored of chunks
+hybrid - rag approach in which search is done using semantic search
+
+1) "metadata"
+   → Use when the query refers to a specific structured entity
+     that is indexed in metadata.
+   → use when user asks question that needs listing something and in situations when semantic search might fail   
+
+   Structured entities include:
+   - Chapter numbers (e.g., Chapter 6)
+   - Section numbers (e.g., 6.2)
+   - Subsection numbers (e.g., 6.2.1)
+   - Example numbers (e.g., Example 6.1)
+   - Exercise numbers (e.g., Exercise 6.1)
+   - Figure numbers (e.g., Fig. 6.3)
+
+   If the user query clearly targets a specific numbered
+   textbook entity, choose "metadata".
+
+   if user query not clearly targets a specific number you need to think of approach can direct metadata retireval answer that question if yes just go for it
+
+   Even if the user says "explain", "solve", or "derive",
+   if it references a specific numbered entity,
+   choose "metadata".
+
+------------------------------------------------------------
+
+2) "hybrid"
+   → Use when the query is conceptual or thematic
+     and does NOT refer to a specific numbered entity.
+
+   Examples:
+   - explain angular momentum
+   - why does torque cause rotation?
+   - what is rigid body motion?
+   - explain conservation of energy
+
+------------------------------------------------------------
+
+Decision Logic:
+
+If the query contains a specific textbook reference
+(example number, exercise number, section number, etc.),
+choose "metadata".
+
+Otherwise, choose "hybrid".
+
+If unsure, default to "hybrid".
+
+------------------------------------------------------------
+
+Return STRICT JSON only:
+
+{{
+  "retrieval_type": "metadata" OR "hybrid"
+}}
+
+User Query:
+{prompt}
+"""
+
+
+    response = st.session_state.groq_client.chat.completions.create(
+        model="llama-3.1-8b-instant",  # small cheap model
+        messages=[{"role": "user", "content": classifier_prompt}],
+        temperature=0
+    )
+
+    try:
+        content = response.choices[0].message.content
+        start = content.find("{")
+        end = content.rfind("}") + 1
+        return json.loads(content[start:end])
+    except:
+        return {"retrieval_type": "hybrid"}
+
+def generate_metadata_query(prompt):
+
+    schema = f"""
+You are generating metadata filters for a vector database.
+
+VALID chapter_title values:
+{CHAPTER_MAPPING}
+
+CHAPTER NUMBER → chapter_title mapping:
+5 → W ORK , E NERGY   AND  P OWER
+6 → S YSTEMS   OF  P ARTICLES   AND  R OTATIONAL  M OTION
+
+try linking chapter number to chapter title
+
+-----------------------------------------------------
+
+IMPORTANT RULES:
+
+1. chapter_title MUST be one of the AVAILABLE CHAPTERS above.
+2. If user mentions:
+      "chapter 6"
+   You MUST use the mapped chapter_title:
+      "S YSTEMS   OF  P ARTICLES   AND  R OTATIONAL  M OTION"
+3. NEVER return chapter_title as a number like "6".
+4. NEVER invent values like "chapter_6".
+5. Use EXACT metadata values only.
+
+-----------------------------------------------------
+
+The database stores metadata exactly like this:
+
+Example Section Chunk:
+{{
+  "chapter_title": "W AVES",
+  "section_id": "14.1",
+  "section_title": "14.1   INTRODUCTION",
+  "content_type": "section"
+}}
+
+Example Subsection Chunk:
+{{
+  "chapter_title": "W AVES",
+  "subsection_id": "14.1.1",
+  "content_type": "subsection"
+}}
+
+Example Exercises Chunk:
+{{
+  "chapter_title": "W AVES",
+  "content_type": "exercises"
+}}
+
+Example Summary Chunk:
+{{
+  "chapter_title": "W AVES",
+  "content_type": "summary"
+}}
+
+--------------------------------------------------
+
+VALID content_type values:
+- section
+- subsection
+- summary
+- points_to_ponder
+- exercises
+
+--------------------------------------------------
+
+RULES:
+1. chapter_id MUST be exactly one of the provided valid values.
+2. DO NOT invent values like "chapter_5".
+3. section_id format must look like "5.1"
+4. subsection_id format must look like "5.1.1"
+5. example_number format must look like "5.1"
+6. Include only necessary filters.
+
+--------------------------------------------------
+
+Return STRICT JSON only:
+
+{{
+  "filters": {{
+      "field": "value"
+  }}
+}}
+
+Return JSON only. No explanation.
+"""
+
+    planner_prompt = f"""
+User Query:
+{prompt}
+
+{schema}
+"""
+
+    response = st.session_state.groq_client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[{"role": "user", "content": planner_prompt}],
+        temperature=0
+    )
+
+    content = response.choices[0].message.content
+    content = content.replace("```json", "").replace("```", "").strip()
+
+    try:
+        return json.loads(content)
+    except:
+        print("[PLANNER ERROR] Could not parse JSON:", content)
+        return {"filters": {}}
+
+
 def format_contexts(chunks):
     formatted = []
     for i, chunk in enumerate(chunks, 1):
@@ -280,10 +485,10 @@ def format_contexts(chunks):
         header_label = ""
         if meta.get("example_number"):
             header_label = f"[Primary Example {meta['example_number']}]"
-        elif meta.get("section_number"):
-            header_label = f"[Section {meta['section_number']}]"
-            if meta.get('subsection_number'):
-                header_label += f".{meta['subsection_number']}"
+        elif meta.get("section_id"):
+            header_label = f"[Section {meta['section_id']}]"
+            if meta.get('subsection_id'):
+                header_label += f".{meta['subsection_id']}"
         
         location_title = meta.get('subsection_title') or meta.get('section_title') or "Unknown Section"
 
@@ -584,16 +789,42 @@ if prompt := st.chat_input("Ask a question about the chapter..."):
             t0 = time.time()
             # Initial retrieval with chapter filter
             chapter_filter = st.session_state.get('selected_chapters', None)
-            results = st.session_state.retriever.retrieve(
-                prompt, 
-                top_k=top_k,
-                chapter_filter=chapter_filter
-            )
+            
+            intent = classify_intent(prompt)
+            debug_log(f"[INTENT] Result: {intent}")
+
+            if intent["retrieval_type"] == "hybrid":
+                # Normal RAG
+                print(f"[DEBUG] Intent classified as HYBRID. Prompt: {prompt}")
+                st.info("🧠 Approach: **Hybrid Search** (Conceptual/Explanatory)")
+                
+                results = st.session_state.retriever.retrieve(
+                    prompt, 
+                    top_k=top_k,
+                    chapter_filter=chapter_filter
+                )
+            else:
+                # Metadata flow
+                print(f"[DEBUG] Intent classified as METADATA. Prompt: {prompt}")
+                plan = generate_metadata_query(prompt)
+                print(f"[DEBUG] Metadata Plan: {plan}")
+                debug_log(f"[PLANNER] Metadata Plan: {plan}")
+                st.info(f"🗂️ Approach: **Metadata Search** (Structured)\n\nPlan: `{plan}`")
+
+                results = st.session_state.retriever.metadata_retrieve(
+                    filters=plan.get("filters", {}),
+                    limit=50
+                )
             t1 = time.time()
             retrieval_time = t1 - t0
             
             # Reranking
-            reranked_results = st.session_state.retriever.rerank(prompt, results, top_k=final_chunks)
+            
+            if intent["retrieval_type"] == "metadata":
+                reranked_results = results[:final_chunks]
+            else:
+                reranked_results = st.session_state.retriever.rerank(prompt, results, top_k=final_chunks)
+
             t2 = time.time()
             rerank_time = t2 - t1
             
@@ -672,8 +903,8 @@ if prompt := st.chat_input("Ask a question about the chapter..."):
                 # 1. Extract and store sources including image_paths
                 sources = [
                     {
-                        'section_number': c.payload['metadata']['section_number'],
-                        'subsection_number': c.payload['metadata'].get('subsection_number'),
+                        'section_number': c.payload['metadata']['section_id'],
+                        'subsection_number': c.payload['metadata'].get('subsection_id'),
                         'section_title': c.payload['metadata']['section_title'],
                         'text': c.payload['text'],
                         'image_paths': c.payload['metadata'].get('image_paths', []) # Use paths

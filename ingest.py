@@ -6,9 +6,7 @@ import time
 import numpy as np
 from typing import List, Dict, Any
 from dotenv import load_dotenv
-from langchain_community.document_loaders import JSONLoader
 from langchain_core.documents import Document
-from langchain_experimental.text_splitter import SemanticChunker
 from langchain_huggingface import HuggingFaceEmbeddings
 from qdrant_client import QdrantClient, models
 from qdrant_client.models import (
@@ -638,6 +636,22 @@ def delete_chapter(client, chapter_id):
 
 if __name__ == "__main__":
     import sys
+
+    # default_path = "processed_data/knowledge_base/structure.json"
+
+    # if len(sys.argv) > 1:
+    #     file_path = sys.argv[1]
+    #     if os.path.exists(file_path):
+    #         print(f"Ingesting from command line argument: {file_path}")
+    #         ingest_data(file_path)
+    #     else:
+    #         print(f"Error: File not found: {file_path}")
+    # elif os.path.exists(default_path):
+    #     ingest_data(default_path)
+    # else:
+    #     print("No suitable JSON file found (checked chapter_structure.json, physics_structure.json).")
+    #     print("Usage: python ingest.py [path_to_structure.json]")
+
     if len(sys.argv) > 1:
         file_path = sys.argv[1]
         if os.path.exists(file_path):
