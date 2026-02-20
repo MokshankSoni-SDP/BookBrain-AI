@@ -279,12 +279,28 @@ class PhysicsRetriever:
             if value is None:
                 continue
 
-            must_conditions.append(
-                models.FieldCondition(
-                    key=f"metadata.{key}",
-                    match=models.MatchValue(value=value)
+            if isinstance(value, list):
+                must_conditions.append(
+                    models.FieldCondition(
+                        key=f"metadata.{key}",
+                        match=models.MatchAny(any=value)
+                    )
                 )
-            )
+            else:
+                must_conditions.append(
+                    models.FieldCondition(
+                        key=f"metadata.{key}",
+                        match=models.MatchValue(value=value)
+                    )
+                )
+
+
+            # must_conditions.append(
+            #     models.FieldCondition(
+            #         key=f"metadata.{key}",
+            #         match=models.MatchValue(value=value)
+            #     )
+            # )
 
         if not must_conditions:
             return []

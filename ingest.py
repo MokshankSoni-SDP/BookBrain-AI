@@ -256,6 +256,7 @@ def load_and_process_data(file_input: Any) -> List[Dict[str, Any]]:
     
     for i, chapter in enumerate(chapters):
         chapter_title = chapter.get("chapter_title", "Unknown Chapter")
+        grade = chapter.get("grade", None)
         chapter_id = chapter_title.lower().replace(" ", "_")
 
         sections = chapter.get("sections", [])
@@ -275,6 +276,7 @@ def load_and_process_data(file_input: Any) -> List[Dict[str, Any]]:
                     processed_items.append({
                         "text": content_text,
                         "metadata": {
+                            "grade": grade,
                             "chapter_id": chapter_id, 
                             "chapter_title": chapter_title,
                             "section_id": section_id,
@@ -301,6 +303,7 @@ def load_and_process_data(file_input: Any) -> List[Dict[str, Any]]:
                         processed_items.append({
                             "text": full_text,
                             "metadata": {
+                                "grade": grade,
                                 "chapter_id": chapter_id, 
                                 "chapter_title": chapter_title,
                                 "section_id": section_id,
@@ -323,6 +326,7 @@ def load_and_process_data(file_input: Any) -> List[Dict[str, Any]]:
                 processed_items.append({
                     "text": summary_text,
                     "metadata": {
+                        "grade": grade,
                         "chapter_id": chapter_id,
                         "chapter_title": chapter_title,
                         "section_id": None,
@@ -345,6 +349,7 @@ def load_and_process_data(file_input: Any) -> List[Dict[str, Any]]:
                 processed_items.append({
                     "text": p2p_text,
                     "metadata": {
+                        "grade": grade,
                         "chapter_id": chapter_id,
                         "chapter_title": chapter_title,
                         "section_id": None,
@@ -367,6 +372,7 @@ def load_and_process_data(file_input: Any) -> List[Dict[str, Any]]:
                 processed_items.append({
                     "text": exercise_text,
                     "metadata": {
+                        "grade": grade,
                         "chapter_id": chapter_id,
                         "chapter_title": chapter_title,
                         "section_id": None,
@@ -637,20 +643,7 @@ def delete_chapter(client, chapter_id):
 if __name__ == "__main__":
     import sys
 
-    # default_path = "processed_data/knowledge_base/structure.json"
-
-    # if len(sys.argv) > 1:
-    #     file_path = sys.argv[1]
-    #     if os.path.exists(file_path):
-    #         print(f"Ingesting from command line argument: {file_path}")
-    #         ingest_data(file_path)
-    #     else:
-    #         print(f"Error: File not found: {file_path}")
-    # elif os.path.exists(default_path):
-    #     ingest_data(default_path)
-    # else:
-    #     print("No suitable JSON file found (checked chapter_structure.json, physics_structure.json).")
-    #     print("Usage: python ingest.py [path_to_structure.json]")
+    default_path = "processed_data/knowledge_base/structure.json"
 
     if len(sys.argv) > 1:
         file_path = sys.argv[1]
@@ -659,11 +652,24 @@ if __name__ == "__main__":
             ingest_data(file_path)
         else:
             print(f"Error: File not found: {file_path}")
-    elif os.path.exists("chapter_structure.json"):
-        ingest_data("chapter_structure.json")
-    elif os.path.exists("physics_structure.json"):
-        print("Found physics_structure.json, ingesting...")
-        ingest_data("physics_structure.json")
+    elif os.path.exists(default_path):
+        ingest_data(default_path)
     else:
         print("No suitable JSON file found (checked chapter_structure.json, physics_structure.json).")
         print("Usage: python ingest.py [path_to_structure.json]")
+
+    # if len(sys.argv) > 1:
+    #     file_path = sys.argv[1]
+    #     if os.path.exists(file_path):
+    #         print(f"Ingesting from command line argument: {file_path}")
+    #         ingest_data(file_path)
+    #     else:
+    #         print(f"Error: File not found: {file_path}")
+    # elif os.path.exists("chapter_structure.json"):
+    #     ingest_data("chapter_structure.json")
+    # elif os.path.exists("physics_structure.json"):
+    #     print("Found physics_structure.json, ingesting...")
+    #     ingest_data("physics_structure.json")
+    # else:
+    #     print("No suitable JSON file found (checked chapter_structure.json, physics_structure.json).")
+    #     print("Usage: python ingest.py [path_to_structure.json]")

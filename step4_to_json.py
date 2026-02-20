@@ -10,7 +10,8 @@ def build_hierarchy(classified_items):
         "sections": [],
         "summary": [],
         "points_to_ponder": [],
-        "exercises": []
+        "exercises": [],
+        "topics_index":[]
     }
 
     curr_sec, curr_subsec = None, None
@@ -57,6 +58,21 @@ def build_hierarchy(classified_items):
         if itype == "HEADING":
             id_tag = ivalue.split()[0]
             level = id_tag.count('.')
+
+            # 🔥 STORE IN TOPICS INDEX
+            if level == 1:
+                root["topics_index"].append({
+                    "id": id_tag,
+                    "title": ivalue,
+                    "level": "section"
+                })
+        
+            elif level == 2:
+                root["topics_index"].append({
+                    "id": id_tag,
+                    "title": ivalue,
+                    "level": "subsection"
+                })
 
             if level == 1:
                 curr_sec = {

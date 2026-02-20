@@ -365,100 +365,93 @@ User Query:
 
 def generate_metadata_query(prompt):
 
-    schema = f"""
+    # ---- Chapter Mapping (MANUAL for now as you said) ----
+    CHAPTER_MAPPING = {
+        "11":{
+        "1": "U NITS   AND  M EASUREMENT",
+        "2": "M OTION   IN   A  S TRAIGHT  L INE",
+        "3": "M OTION   IN   A  P LANE",
+        "4": "L AWS   OF  M OTION",
+        "5": "W ORK , E NERGY   AND  P OWER",
+        "6": "S YSTEMS   OF  P ARTICLES   AND  R OTATIONAL  M OTION",
+        "7": "G RAVITATION",
+        "8": "M ECHANICAL  P ROPERTIES   OF  S OLIDS",
+        "9": "M ECHANICAL  P ROPERTIES   OF  F LUIDS",
+        "10": "T HERMAL  P ROPERTIES   OF  M ATTER",
+        "11": "T HERMODYNAMICS",
+        "12": "K INETIC  T HEORY",
+        "13": "O SCILLATIONS",
+        "14": "W AVES"
+    },
+    "12":{
+        "1": "U NITS   AND  M EASUREMENT",
+        "2": "M OTION   IN   A  S TRAIGHT  L INE",
+        "3": "M OTION   IN   A  P LANE",
+        "4": "L AWS   OF  M OTION",
+        "5": "W ORK , E NERGY   AND  P OWER",
+        "6": "S YSTEMS   OF  P ARTICLES   AND  R OTATIONAL  M OTION",
+        "7": "G RAVITATION",
+        "8": "M ECHANICAL  P ROPERTIES   OF  S OLIDS",
+        "9": "M ECHANICAL  P ROPERTIES   OF  F LUIDS",
+        "10": "T HERMAL  P ROPERTIES   OF  M ATTER",
+        "11": "T HERMODYNAMICS",
+        "12": "K INETIC  T HEORY",
+        "13": "O SCILLATIONS",
+        "14": "W AVES"
+    }
+    }
+
+    # ---- Schema Block (NO f-string, NO braces formatting issues) ----
+    schema_block = """
 You are generating metadata filters for a vector database.
 
+The system stores textbook content in structured metadata.
+
+Available metadata fields:
+- grade ("11" or "12")
+- chapter_title
+- section_id
+- section_title
+- subsection_id
+- subsection_title
+- content_type (section, subsection, summary, points_to_ponder, exercises)
+- example_number
+- figure_number
+
+VALID grade values:
+- "11"
+- "12"
+
+If user says:
+- class 11 / 11th / grade 11 → use "grade": "11"
+- class 12 / 12th / grade 12 → use "grade": "12"
+
+If grade is not mentioned, DO NOT include grade in filters.
+
 VALID chapter_title values:
-{CHAPTER_MAPPING}
+""" + json.dumps(CHAPTER_MAPPING, indent=2) + """
 
-CHAPTER NUMBER → chapter_title mapping:
-5 → W ORK , E NERGY   AND  P OWER
-6 → S YSTEMS   OF  P ARTICLES   AND  R OTATIONAL  M OTION
-
-try linking chapter number to chapter title
-
------------------------------------------------------
-
-IMPORTANT RULES:
-
-1. chapter_title MUST be one of the AVAILABLE CHAPTERS above.
-2. If user mentions:
-      "chapter 6"
-   You MUST use the mapped chapter_title:
-      "S YSTEMS   OF  P ARTICLES   AND  R OTATIONAL  M OTION"
-3. NEVER return chapter_title as a number like "6".
-4. NEVER invent values like "chapter_6".
-5. Use EXACT metadata values only.
-
------------------------------------------------------
-
-The database stores metadata exactly like this:
-
-Example Section Chunk:
-{{
-  "chapter_title": "W AVES",
-  "section_id": "14.1",
-  "section_title": "14.1   INTRODUCTION",
-  "content_type": "section"
-}}
-
-Example Subsection Chunk:
-{{
-  "chapter_title": "W AVES",
-  "subsection_id": "14.1.1",
-  "content_type": "subsection"
-}}
-
-Example Exercises Chunk:
-{{
-  "chapter_title": "W AVES",
-  "content_type": "exercises"
-}}
-
-Example Summary Chunk:
-{{
-  "chapter_title": "W AVES",
-  "content_type": "summary"
-}}
-
---------------------------------------------------
-
-VALID content_type values:
-- section
-- subsection
-- summary
-- points_to_ponder
-- exercises
-
---------------------------------------------------
-
-RULES:
-1. chapter_id MUST be exactly one of the provided valid values.
-2. DO NOT invent values like "chapter_5".
-3. section_id format must look like "5.1"
-4. subsection_id format must look like "5.1.1"
-5. example_number format must look like "5.1"
-6. Include only necessary filters.
-
---------------------------------------------------
+Rules:
+- If user mentions chapter number, map it using chapter_title above.
+- If user mentions chapter name directly, use exact chapter_title.
+- content_type must be EXACTLY one of:
+  section, subsection, summary, points_to_ponder, exercises
 
 Return STRICT JSON only:
 
-{{
-  "filters": {{
-      "field": "value"
-  }}
-}}
+{
+  "filters": {
+     "field": "value"
+  }
+}
 
-Return JSON only. No explanation.
+If no metadata filter applies, return:
+{
+  "filters": {}
+}
 """
 
-    planner_prompt = f"""
-User Query:
-{prompt}
-
-{schema}
-"""
+    planner_prompt = schema_block + "\n\nUser Query:\n" + prompt
 
     response = st.session_state.groq_client.chat.completions.create(
         model="llama-3.3-70b-versatile",
@@ -466,14 +459,17 @@ User Query:
         temperature=0
     )
 
-    content = response.choices[0].message.content
-    content = content.replace("```json", "").replace("```", "").strip()
-
     try:
-        return json.loads(content)
-    except:
-        print("[PLANNER ERROR] Could not parse JSON:", content)
+        content = response.choices[0].message.content
+        start = content.find("{")
+        end = content.rfind("}") + 1
+        parsed = json.loads(content[start:end])
+        print(f"[PLANNER] Metadata Plan: {parsed}")
+        return parsed
+    except Exception as e:
+        print(f"[PLANNER ERROR] {e}")
         return {"filters": {}}
+
 
 
 def format_contexts(chunks):
@@ -721,8 +717,8 @@ with st.sidebar:
 
     # 4. Retrieval Settings
     st.subheader("🔍 Retrieval Settings")
-    top_k = st.slider("Initial Retrieval (K)", 10, 50, 20)
-    final_chunks = st.slider("Final Context Chunks", 3, 15, 6)
+    top_k = st.slider("Initial Retrieval (K)", 6, 50, 20)
+    final_chunks = st.slider("Final Context Chunks", 1, 15, 2)
     
     # 4. Advanced Options
     with st.expander("🛠️ Advanced"):
@@ -768,6 +764,108 @@ with chat_container:
 
                 # Images are now injected into the text, so no need to show them separately here.
 
+def is_topic_query(prompt: str) -> bool:
+    prompt_lower = prompt.lower()
+
+    topic_patterns = [
+        "list topics",
+        "list all topics",
+        "list topic",
+        "give all topics",
+        "list all topic",
+        "which are the topics",
+        "which are the topic",
+        "what are the topics",
+        "what are the topic",
+        "topics of chapter",
+        "topic of chapter",
+        "all topics",
+        "all topic"
+    ]
+
+    return any(p in prompt_lower for p in topic_patterns)
+
+def normalize_text(text: str) -> str:
+    """
+    Normalize text for reliable comparison:
+    - Remove extra spaces
+    - Remove all inner spaces
+    - Lowercase
+    - Remove commas and special characters
+    """
+    text = text.lower()
+    text = re.sub(r"\s+", "", text)  # remove ALL spaces
+    text = re.sub(r"[^\w]", "", text)  # remove punctuation
+    return text
+
+
+def extract_chapter_title_from_prompt(prompt: str):
+    prompt_lower = prompt.lower()
+
+    structure_path = "processed_data/knowledge_base/structure.json"
+
+    if not os.path.exists(structure_path):
+        return None
+
+    with open(structure_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    chapters = data.get("chapters", data)
+
+    normalized_prompt = normalize_text(prompt)
+
+    # Case 1 — If user says "chapter 5"
+    match = re.search(r"chapter\s+(\d+)", prompt_lower)
+    if match:
+        chapter_title  = match.group(1)
+
+        # Use CHAPTER_MAPPING to map number to title
+        mapped_title = CHAPTER_MAPPING.get(chapter_title)
+        if mapped_title:
+            return mapped_title
+
+    # Case 2 — If user directly writes chapter name
+    for chapter in chapters:
+        stored_title = chapter.get("chapter_title", "")
+        normalized_stored = normalize_text(stored_title)
+
+        if normalized_stored in normalized_prompt:
+            return stored_title
+
+    return None
+
+
+def get_topics_from_structure(chapter_title: str):
+    structure_path = "processed_data/knowledge_base/structure.json"
+
+    if not os.path.exists(structure_path):
+        return []
+
+    with open(structure_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    chapters = data.get("chapters", data)
+
+    for chapter in chapters:
+        if chapter.get("chapter_title") == chapter_title:
+            topics = []
+
+            for section in chapter.get("sections", []):
+                sec_id = section.get("id")
+                sec_title = section.get("title")
+                topics.append(f"{sec_id} — {sec_title}")
+
+                for subsection in section.get("subsections", []):
+                    sub_id = subsection.get("id")
+                    sub_title = subsection.get("title")
+                    topics.append(f"{sub_id} — {sub_title}")
+
+            return topics
+
+    return []
+
+
+
 # Chat Input
 if prompt := st.chat_input("Ask a question about the chapter..."):
     # Add user message
@@ -790,10 +888,65 @@ if prompt := st.chat_input("Ask a question about the chapter..."):
             # Initial retrieval with chapter filter
             chapter_filter = st.session_state.get('selected_chapters', None)
             
-            intent = classify_intent(prompt)
-            debug_log(f"[INTENT] Result: {intent}")
+            # -------------------------------
+            # DIRECT TOPIC EXTRACTION FLOW
+            # -------------------------------
+            
+            if is_topic_query(prompt):
+                debug_log("[ROUTER] Topic query detected. Using direct JSON extraction.")
+            
+                chapter_title = extract_chapter_title_from_prompt(prompt)
+                print(f"[DEBUG] Extracted chapter title: {chapter_title}")
+            
+                if not chapter_title:
+                    st.error("Could not detect chapter number.")
+                    st.stop()
+            
+                topics = get_topics_from_structure(chapter_title)
+                print(f"[DEBUG] Extracted topics: {topics}")
+            
+                if not topics:
+                    st.error("No topics found for this chapter.")
+                    st.stop()
 
-            if intent["retrieval_type"] == "hybrid":
+                # -------------------------------
+                # DIRECT STREAMLIT DISPLAY
+                # -------------------------------
+                with message_placeholder.container():
+                    st.markdown(f"### 📘 {chapter_title}")
+                    st.markdown("---")
+
+                    for i, topic in enumerate(topics, 1):
+                        st.markdown(f"**{i}.** {topic}")
+
+                # Save to history
+                st.session_state.messages.append({
+                    "role": "assistant",
+                    "content": f"Displayed topics for {chapter_title}",
+                    "sources": [],
+                    "images": [],
+                    "context": "Direct Topic Extraction"
+                })
+
+                st.stop()
+            
+                # context_str = "\n".join(topics)
+                # print(f"[DEBUG] Context string: {context_str}")
+            
+                # # Skip retrieval completely
+                intent = {"retrieval_type": "direct_topics"}
+            
+            else:
+                intent = classify_intent(prompt)
+                debug_log(f"[INTENT] Result: {intent}")
+
+            if intent["retrieval_type"] == "direct_topics":
+                results = []
+                reranked_results = []
+                retrieval_time = 0
+                context_time = 0
+
+            elif intent["retrieval_type"] == "hybrid":
                 # Normal RAG
                 print(f"[DEBUG] Intent classified as HYBRID. Prompt: {prompt}")
                 st.info("🧠 Approach: **Hybrid Search** (Conceptual/Explanatory)")
@@ -820,17 +973,19 @@ if prompt := st.chat_input("Ask a question about the chapter..."):
             
             # Reranking
             
-            if intent["retrieval_type"] == "metadata":
-                reranked_results = results[:final_chunks]
-            else:
-                reranked_results = st.session_state.retriever.rerank(prompt, results, top_k=final_chunks)
+            if intent["retrieval_type"] != "direct_topics":
 
-            t2 = time.time()
-            rerank_time = t2 - t1
-            
-            context_str = format_contexts(reranked_results)
-            t3 = time.time()
-            context_time = t3 - t2
+                if intent["retrieval_type"] == "metadata":
+                    reranked_results = results[:final_chunks]
+                else:
+                    reranked_results = st.session_state.retriever.rerank(prompt, results, top_k=final_chunks)
+
+                t2 = time.time()
+                rerank_time = t2 - t1
+                
+                context_str = format_contexts(reranked_results)
+                t3 = time.time()
+                context_time = t3 - t2
         
         # Generation phase
         with st.spinner("✍️ Generating answer..."):

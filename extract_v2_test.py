@@ -150,7 +150,8 @@ def build_json_v2(extracted_items):
                     "sections": [],
                     "summary": [],
                     "points_to_ponder": [],
-                    "exercises": []
+                    "exercises": [],
+                    "topics_index": []
                 }
 
                 structure["chapters"].append(current_chapter)
@@ -210,6 +211,13 @@ def build_json_v2(extracted_items):
                 }
                 current_chapter["sections"].append(curr_section)
                 curr_subsection = None
+
+                current_chapter["topics_index"].append({
+                    "id": section_match.group(1),
+                    "title": section_match.group(2),
+                    "level": "section"
+                })
+
                 continue
 
             # Subsection (e.g., 2.3.1 Something)
@@ -223,6 +231,14 @@ def build_json_v2(extracted_items):
                 }
                 if curr_section:
                     curr_section["subsections"].append(curr_subsection)
+
+                # ✅ Store topic
+                current_chapter["topics_index"].append({
+                    "id": subsection_match.group(1),
+                    "title": subsection_match.group(2),
+                    "level": "subsection"
+                })
+
                 continue
 
         # --------------------------------------------------
