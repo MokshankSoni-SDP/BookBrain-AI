@@ -449,7 +449,7 @@ PDF internal block order ≠ logical reading order.
 
 ## Attempt 1 — Manual Column Splitting
 
-We introduced:
+I introduced:
 
 ```python
 split_x = page_width * COLUMN_GAP_THRESHOLD
