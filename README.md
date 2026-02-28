@@ -12,7 +12,7 @@
 |---|---|
 | 1 | [🔄 Pipeline](#-pipeline) |
 | 2 | [🖼️ Image Extraction, Storage & Display Pipeline](#️-image-extraction-storage--display-pipeline) |
-| 3 | [📘 Complete Technical Evolution Documentation](#-complete-technical-evolution-documentation) |
+| 3 | [📘 Steps taken to build this project](#-Steps taken to build this project) |
 
 ---
 
@@ -398,7 +398,7 @@ This documentation traces the technical evolution of the **BookBrain AI** (Physi
 
 ---
 
-## 📘 Complete Technical Evolution Documentation
+## 📘 Steps taken to build this project
 
 ### (NCERT Physics 11/12 – Structure-Aware RAG System)
 
