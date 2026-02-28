@@ -6,6 +6,16 @@
 
 ---
 
+## 📑 Index
+
+| # | Section |
+|---|---|
+| 1 | [🔄 Pipeline](#-pipeline) |
+| 2 | [🖼️ Image Extraction, Storage & Display Pipeline](#️-image-extraction-storage--display-pipeline) |
+| 3 | [📘 Complete Technical Evolution Documentation](#-complete-technical-evolution-documentation) |
+
+---
+
 ## ✨ Features
 
 - 📄 **PDF Ingestion** — Upload 11/12th NCERT Physics chapter PDF directly from the UI
@@ -379,3 +389,504 @@ Retrieved chunks
 - Each chunk's payload contains rich metadata: `chapter_id`, `section_id`, `subsection_id`, `content_type`, `example_number`, `figure_number`, `image_refs`, `image_paths`, `chunk_index`, `estimated_tokens`.
 - The system currently targets **NCERT Physics Class 11** chapters by default, but supports multi-grade ingestion via the `grade` metadata field.
 - Diagrams are saved as `fig_X_Y.png` in the run's `images/` subdirectory and linked in chunk metadata for inline display.
+
+---
+---
+---
+
+This documentation traces the technical evolution of the **BookBrain AI** (Physics Textbook RAG) project. It outlines the journey from initial architectural failures to the development of a robust, structure-aware, and multimodal retrieval system.
+
+---
+
+## 📘 Complete Technical Evolution Documentation
+
+### (NCERT Physics 11/12 – Structure-Aware RAG System)
+
+---
+
+# 🔵 PHASE 1 — Problem Definition
+
+## 🎯 Objective
+
+Build a fully grounded AI tutor that:
+
+* Uses **only NCERT Physics textbook content**
+* Handles **Class 11 (two-column) and Class 12 (single-column) layouts**
+* Extracts **figures accurately**
+* Preserves **hierarchical structure**
+* Supports **example-level retrieval**
+* Enables **summary / exercises separation**
+* Avoids hallucination
+* Produces LaTeX-clean pedagogical answers
+* Scales across the entire textbook
+
+---
+
+# 🔵 PHASE 2 — Raw PDF Text Extraction
+
+## Step 1 — Naive Block Extraction
+
+Used:
+
+```python
+page.get_text("blocks")
+```
+
+### ❌ Problems:
+
+* Mixed left & right columns (Class 11)
+* Summary merged with theory
+* Exercises misordered
+* Equations split into micro-blocks
+* Headers and page numbers included
+
+### 🔎 Insight:
+
+PDF internal block order ≠ logical reading order.
+
+---
+
+# 🔵 PHASE 3 — Column Handling Evolution (Class 11)
+
+## Attempt 1 — Manual Column Splitting
+
+We introduced:
+
+```python
+split_x = page_width * COLUMN_GAP_THRESHOLD
+```
+
+Blocks were divided into:
+
+* Left column
+* Right column
+
+Sorted vertically and merged.
+
+### ❌ Problem:
+
+* Summary and Exercises are sometimes full-width
+* Some blocks slightly cross threshold
+* Column bleed during figure search
+
+---
+
+## Final Strategy — Reading Order Sorting
+
+Instead of splitting columns permanently:
+
+```python
+blocks.sort(key=lambda b: (round(b[1],1), round(b[0],1)))
+```
+
+Sort by:
+
+1. Y coordinate (top-to-bottom)
+2. X coordinate (left-to-right)
+
+### ✅ Result:
+
+* Stable reading order
+* Works for mixed layouts
+* Handles theory + exercises + summary
+
+---
+
+# 🔵 PHASE 4 — Image Extraction Evolution (Major Engineering Journey)
+
+This was one of the most important breakthroughs.
+
+---
+
+## Step 1 — Standard Image Extraction
+
+Used:
+
+```python
+page.get_images()
+```
+
+### ❌ Failure:
+
+NCERT diagrams are:
+
+* Vector graphics
+* Printed directly into page stream
+* Not embedded bitmaps
+
+Extraction returned empty or irrelevant images.
+
+---
+
+## Step 2 — Blind Bounding Box Snapshots
+
+Attempted:
+
+* Manual coordinate cropping
+
+### ❌ Problems:
+
+* Cut off parts of diagrams
+* Included surrounding text
+* No reliable automation
+
+---
+
+## Step 3 — Caption-Anchored Strategy (Breakthrough)
+
+Observation:
+Every diagram has caption:
+
+```
+Fig. X.Y
+```
+
+### Strategy:
+
+1. Detect caption via regex:
+
+   ```
+   r'(?:Fig\.|Figure)\s*(\d+\.\d+)'
+   ```
+2. Capture caption coordinates.
+3. Project search region upward.
+4. Collect:
+
+   * `get_drawings()` (vector lines)
+   * `get_images()` (bitmaps)
+5. Use Union operator (`|`) to merge bounding boxes.
+6. Add padding for label text.
+7. Render 300 DPI pixmap.
+
+### ✅ Result:
+
+* Fully automated
+* Vector + bitmap compatible
+* High-resolution diagrams
+* Stable for 11th and 12th
+
+This became the **production image pipeline**.
+
+---
+
+# 🔵 PHASE 5 — Structural Hierarchy Building
+
+## Initial Approach — Flat Text List
+
+Stored everything as string chunks.
+
+### ❌ Problem:
+
+RAG could not distinguish:
+
+* Section vs Subsection
+* Example vs Paragraph
+* Summary vs Theory
+
+---
+
+## Dynamic Regex-Based Heading Detection
+
+Introduced dynamic pattern:
+
+```
+\d+\.\d+
+\d+\.\d+\.\d+
+```
+
+Dot count determines hierarchy level.
+
+Built nested JSON:
+
+```json
+Chapter
+ ├── Section
+      ├── Subsection
+            ├── Content List
+```
+
+### ✅ Result:
+
+Fully structured academic representation.
+
+---
+
+# 🔵 PHASE 6 — TOC Guard & Special Sections
+
+## Problem:
+
+First page (Table of Contents) triggered false structural breaks.
+
+### Solution:
+
+Ignore structural anchors on page 0:
+
+```
+if page_num > 0:
+    apply structural rules
+```
+
+---
+
+## Special Sections Handling
+
+Created standalone anchors for:
+
+* SUMMARY
+* POINTS TO PONDER
+* EXERCISES
+
+These trigger mode switches in JSON routing.
+
+Ensured:
+
+* No column bleed
+* No theory contamination
+* State reset between chapters
+
+---
+
+# 🔵 PHASE 7 — Structural Chunking Evolution
+
+## Attempt 1 — SemanticChunker
+
+Used embedding-based semantic splitting.
+
+### ❌ Problems:
+
+* Examples split from answers
+* Summary fragmented
+* Exercises broken apart
+* Structural integrity lost
+
+---
+
+## Structural-First Chunking (Final Strategy)
+
+Rules:
+
+| Content Type     | Splitting Rule                |
+| ---------------- | ----------------------------- |
+| Summary          | Atomic                        |
+| Exercises        | Atomic                        |
+| Points to Ponder | Atomic                        |
+| Example          | Isolated + merged with Answer |
+| Theory           | Aggregated with soft limit    |
+
+Implemented:
+
+* `merge_example_answer_blocks()`
+* Paragraph-aware aggregation
+* Soft limit (700 words)
+* Hard cap (900 words)
+
+### ✅ Result:
+
+Academically coherent chunks.
+
+---
+
+# 🔵 PHASE 8 — Metadata Enrichment
+
+Expanded metadata to include:
+
+```json
+{
+  grade,
+  chapter_id,
+  section_id,
+  subsection_id,
+  content_type,
+  example_number,
+  figure_number,
+  image_refs,
+  image_paths,
+  estimated_tokens
+}
+```
+
+### Benefits:
+
+* Direct example lookup
+* Figure-based retrieval
+* Deterministic queries
+* Multi-grade support
+
+---
+
+# 🔵 PHASE 9 — Hybrid Retrieval Evolution
+
+## Initial — Pure Dense Retrieval
+
+Used embeddings only.
+
+### ❌ Problem:
+
+Failed for:
+
+* “Example 6.2”
+* “List topics”
+* “Give exercises of chapter 4”
+
+---
+
+## Hybrid Retrieval Introduced
+
+Dense + BM25 Sparse
+
+Initial sparse mismatch bug fixed by:
+
+* Removing custom sparse
+* Using Qdrant-native BM25
+* Implementing manual RRF fusion (version-safe)
+
+### ✅ Result:
+
+Improved recall + keyword precision.
+
+---
+
+# 🔵 PHASE 10 — Direct Structural Retrieval Layer
+
+If query contains:
+
+```
+Example X.Y
+Fig. X.Y
+Exercises of chapter X
+```
+
+System bypasses hybrid search and directly applies metadata filters.
+
+This created:
+
+### 🔹 Three Routing Layers
+
+1. Topic Query → structure.json (Zero LLM)
+2. Metadata Query → Direct filter
+3. Conceptual Query → Hybrid RAG
+
+---
+
+# 🔵 PHASE 11 — Image Injection in UI
+
+Originally images displayed separately.
+
+Updated logic:
+
+1. Store image paths in metadata.
+2. When LLM mentions:
+
+   ```
+   Fig. X.Y
+   ```
+3. Inject image inline in Streamlit.
+
+This created seamless visual integration.
+
+---
+
+# 🔵 PHASE 12 — Strict Grounding & Pedagogical Layer
+
+## Strict Grounding Rule
+
+If entity not present in retrieved context → refuse.
+
+Prevents hallucination.
+
+---
+
+## LaTeX Protocol
+
+* Inline: `$...$`
+* Display: `$$...$$`
+* No escaped backslashes
+* No plain text math
+
+---
+
+## Pedagogical Adaptivity Layer
+
+Dynamic formatting based on question type:
+
+| Question Type | Response Style         |
+| ------------- | ---------------------- |
+| Definition    | Concise                |
+| Derivation    | Formal steps           |
+| Why           | Conceptual intuition   |
+| Numerical     | Substitution method    |
+| Vague         | Structured explanation |
+
+Maintains:
+
+* Grounding
+* LaTeX precision
+* Figure rules
+
+---
+
+# 🔵 PHASE 13 — Performance & Optimization
+
+Added:
+
+* Token estimation
+* Retrieval timing logs
+* Zero-LLM deterministic topic listing
+* Lightweight embedding shift (768 → 384 dim)
+* GPU acceleration benchmarking
+
+---
+
+# 🔵 FINAL SYSTEM ARCHITECTURE
+
+This is no longer a basic RAG.
+
+It is now:
+
+## 🧠 Structure-Aware Academic Retrieval Engine
+
+With:
+
+* Two-pass extraction pipeline
+* Caption-anchored image detection
+* Hierarchical JSON construction
+* Structural chunk atomicity
+* Metadata-first retrieval
+* Hybrid semantic search
+* Deterministic structural answering
+* Inline figure injection
+* Strict anti-hallucination guard
+* Adaptive pedagogical generation
+* Multi-grade support
+
+---
+
+# 🔥 Core Engineering Principles Learned
+
+1. Structure > semantics for textbooks.
+2. Anchor extraction to textual signals.
+3. Do not split academic logical units.
+4. Use metadata aggressively.
+5. Avoid unnecessary LLM calls.
+6. Layout detection is unreliable — reading-order sorting is stable.
+7. Deterministic routing improves reliability.
+8. Hybrid retrieval requires index consistency.
+9. Preserve figures — never treat them as noise.
+10. Academic integrity requires strict grounding.
+
+---
+
+# 📌 System Maturity Level
+
+I had evolved from:
+
+```
+Basic Semantic RAG
+```
+
+To:
+
+```
+Structure-Aware, Multi-Strategy Academic Retrieval & Teaching Engine
+```
+
