@@ -12,7 +12,7 @@
 |---|---|
 | 1 | [🔄 Pipeline](#-pipeline) |
 | 2 | [🖼️ Image Extraction, Storage & Display Pipeline](#️-image-extraction-storage--display-pipeline) |
-| 3 | [📘 Steps taken to build this project](#-Steps taken to build this project) |
+| 3 | [📘 Steps taken to build this project](#-steps-taken-to-build-this-project) |
 
 ---
 
