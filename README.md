@@ -392,7 +392,6 @@ Retrieved chunks
 
 ---
 ---
----
 
 This documentation traces the technical evolution of the **BookBrain AI** (Physics Textbook RAG) project. It outlines the journey from initial architectural failures to the development of a robust, structure-aware, and multimodal retrieval system.
 
